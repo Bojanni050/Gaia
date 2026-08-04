@@ -16,6 +16,13 @@ export function useConversation() {
 
   const abortRef = useRef(null);
   const finalContentRef = useRef('');
+  const memoryOpenRef = useRef(false);
+  useEffect(() => { memoryOpenRef.current = memory.open; }, [memory.open]);
+
+  const loadReflections = useCallback(async () => {
+    const data = await hermes.listReflections();
+    setMemory((s) => ({ ...s, loading: false, reflections: data.reflections || [] }));
+  }, []);
 
   const refreshConversations = useCallback(async () => {
     const list = await hermes.listConversations();
@@ -85,8 +92,8 @@ export function useConversation() {
     if (artifacts.length) setCanvas({ open: true, artifact: artifacts[artifacts.length - 1] });
 
     // Hindsight quietly reflects on the exchange — best-effort, never blocking.
-    hermes.reflect(convId);
-  }, [openConversation, refreshConversations]);
+    hermes.reflect(convId).then(() => { if (memoryOpenRef.current) loadReflections(); });
+  }, [openConversation, refreshConversations, loadReflections]);
 
   const send = useCallback(async (text, files = []) => {
     let convId = activeId;
@@ -134,9 +141,8 @@ export function useConversation() {
 
   const openMemory = useCallback(async () => {
     setMemory((s) => ({ ...s, open: true, loading: true }));
-    const data = await hermes.listReflections();
-    setMemory({ open: true, loading: false, reflections: data.reflections || [] });
-  }, []);
+    await loadReflections();
+  }, [loadReflections]);
   const closeMemory = useCallback(() => setMemory((s) => ({ ...s, open: false })), []);
   const forgetReflection = useCallback(async (id) => {
     setMemory((s) => ({ ...s, reflections: s.reflections.filter((r) => r.id !== id) }));

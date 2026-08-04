@@ -64,3 +64,16 @@ Chronicles (knowledge), MCP (actions), Gaia Desktop (experience). Deliver 7 foun
 - Memory View (Hindsight provenance/edit/forget UI) — not yet, per user.
 - Gaia's own language for more UI terms (evolve over time).
 - Interactive artifact editing (collaborative canvas) — future.
+
+## Update — 2026-06-01 (Iteration 3: Lexicon, Arrival, Living Canvas, Quiet Memory)
+- Gaia's Lexicon: centralized language (src/gaia/lib/lexicon.js) — "Begin a page", "What I understand", "Reconsider/Revise/Keep a copy", "Untitled page".
+- Arrival Moment: shell fade-in on load + staggered welcome (presence -> greeting -> sub) so opening feels like arriving.
+- Living Canvas: artifacts editable in the companion canvas; edits persist via PATCH /api/hermes/conversations/{cid}/messages/{mid}/artifact (replace_nth_artifact).
+- Quiet Memory (real minimal Hindsight): POST /api/hindsight/reflect extracts durable understandings (domains: preferences/patterns/context/relationships) with provenance + dedup; GET list; DELETE forget. Opt-in MemoryDrawer ("What I understand"), grouped by domain, "Let go" to forget; auto-refreshes when open.
+- Testing agent iteration_2: backend 18/18 pass, frontend 100%, model-agnosticism confirmed. No bugs.
+
+## Deferred / Backlog (updated)
+- Realtime collaborative artifact editing (currently edit + save/persist; live co-editing is future).
+- Split server.py into modules (storage/tools/hermes/hindsight/artifacts) once it grows further.
+- Index reflections.summary; surface reflect model-failure vs nothing-durable.
+- Continue evolving Gaia's own language for more surfaces.
