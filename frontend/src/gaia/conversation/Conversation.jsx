@@ -1,7 +1,8 @@
-import React, { useEffect, useRef, useState } from 'react';
+import React, { useEffect, useMemo, useRef, useState } from 'react';
 import MessageView from './MessageView';
 import Composer from './Composer';
 import Presence from '../presence/Presence';
+import { getGreeting } from '../lib/greeting';
 
 const PRESENCE_WORD = { thinking: 'thinking', speaking: 'speaking', listening: 'listening', resting: '' };
 
@@ -10,6 +11,7 @@ export default function Conversation({
 }) {
   const scrollRef = useRef(null);
   const [inputFocused, setInputFocused] = useState(false);
+  const greeting = useMemo(() => getGreeting(), []);
 
   useEffect(() => {
     const el = scrollRef.current;
@@ -26,11 +28,8 @@ export default function Conversation({
           {empty ? (
             <div className="welcome" data-testid="welcome">
               <Presence state={inputFocused ? 'listening' : 'resting'} size={72} />
-              <h1 className="welcome-title">Hello. I'm Gaia.</h1>
-              <p className="welcome-sub">
-                A place to think, decide, and create — together, over time.
-                I'll remember what matters and stay quiet when it doesn't.
-              </p>
+              <h1 className="welcome-title">{greeting.title}</h1>
+              <p className="welcome-sub">{greeting.sub}</p>
             </div>
           ) : (
             <>

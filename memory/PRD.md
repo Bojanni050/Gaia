@@ -52,3 +52,15 @@ Chronicles (knowledge), MCP (actions), Gaia Desktop (experience). Deliver 7 foun
 
 ## Notes
 - This pass is documentation only. No code, services, or integrations were built. Nothing mocked.
+
+## Update — 2026-06-01 (Iteration 2: Gaia Desktop app + refinements)
+- Built Gaia Desktop (React) as a Hermes dev-stub client: streaming conversation, markdown, code blocks, image display, file uploads (object storage), retry, edit-and-resend, real tool cards (calculate, get_current_time), thinking/presence indicator, and artifacts in a dynamic companion canvas.
+- Backend server.py = Hermes dev-stub: SSE streaming via emergentintegrations LlmChat -> gpt-5.6-terra (reasoning_effort=none for tool support), model-agnostic to the frontend. Object storage wired for uploads. Conversations/messages persisted in Mongo.
+- System contracts added under src/contracts (hermes live; hindsight/chronicles/mcp typed boundaries).
+- Testing agent iteration_1: backend 12/12 pass, frontend 100%, no bugs, model-agnosticism confirmed.
+- Refinements: evolving personal greeting (first-arrival vs returning, time-aware, name=Bo); meditative Presence Engine (4 states, slow sinusoidal breathing, dual halo); renamed "New conversation" -> "New page" (book-like), default thread title -> "Untitled".
+
+## Deferred / Backlog
+- Memory View (Hindsight provenance/edit/forget UI) — not yet, per user.
+- Gaia's own language for more UI terms (evolve over time).
+- Interactive artifact editing (collaborative canvas) — future.

@@ -2,30 +2,45 @@ import React from 'react';
 import { motion } from 'framer-motion';
 
 /**
- * Gaia's presence — a quiet, breathing sign of life.
- * Motion communicates state (resting / listening / thinking / speaking), never decoration.
+ * Presence Engine.
+ *
+ * The orb is not decoration — it is Gaia being "here". Four states, each a slow,
+ * almost meditative breath. Transitions between states are smooth, never flashy.
+ * Presence communicates readiness and attention, it never entertains.
  */
-const CONFIG = {
-  resting: { scale: [1, 1.04, 1], opacity: [0.55, 0.7, 0.55], duration: 6, glow: 0.25 },
-  listening: { scale: [1, 1.06, 1], opacity: [0.7, 0.9, 0.7], duration: 3.4, glow: 0.4 },
-  thinking: { scale: [1, 1.12, 0.98, 1], opacity: [0.7, 1, 0.8, 0.7], duration: 1.8, glow: 0.6 },
-  speaking: { scale: [1, 1.09, 1.02, 1.09, 1], opacity: [0.85, 1, 0.9, 1, 0.85], duration: 1.2, glow: 0.75 },
+const STATES = {
+  resting:   { scale: [1, 1.03, 1],   coreOpacity: [0.48, 0.62, 0.48], halo: 0.20, breath: 8.0 },
+  listening: { scale: [1, 1.05, 1],   coreOpacity: [0.60, 0.80, 0.60], halo: 0.34, breath: 5.2 },
+  thinking:  { scale: [1, 1.075, 1],  coreOpacity: [0.68, 0.96, 0.68], halo: 0.50, breath: 3.4 },
+  speaking:  { scale: [1, 1.06, 1],   coreOpacity: [0.80, 1.00, 0.80], halo: 0.62, breath: 2.4 },
 };
 
+const EASE = [0.37, 0, 0.63, 1]; // slow sinusoidal in/out — meditative
+
 export default function Presence({ state = 'resting', size = 44, label }) {
-  const c = CONFIG[state] || CONFIG.resting;
+  const s = STATES[state] || STATES.resting;
   return (
     <div className="presence" data-testid="gaia-presence" data-state={state} title={`Gaia — ${state}`}>
       <div className="presence-orb-wrap" style={{ width: size, height: size }}>
+        {/* Halo — intensity eases smoothly when the state changes */}
         <motion.span
           className="presence-halo"
-          animate={{ scale: c.scale, opacity: c.glow }}
-          transition={{ duration: c.duration, repeat: Infinity, ease: 'easeInOut' }}
+          animate={{ scale: s.scale, opacity: s.halo }}
+          transition={{
+            scale: { duration: s.breath, repeat: Infinity, ease: EASE },
+            opacity: { duration: 1.6, ease: 'easeInOut' },
+          }}
+        />
+        {/* A second, slower halo drift keeps presence feeling alive without motion noise */}
+        <motion.span
+          className="presence-halo faint"
+          animate={{ rotate: 360 }}
+          transition={{ duration: 46, repeat: Infinity, ease: 'linear' }}
         />
         <motion.span
           className="presence-orb"
-          animate={{ scale: c.scale, opacity: c.opacity }}
-          transition={{ duration: c.duration, repeat: Infinity, ease: 'easeInOut' }}
+          animate={{ scale: s.scale, opacity: s.coreOpacity }}
+          transition={{ duration: s.breath, repeat: Infinity, ease: EASE }}
         />
       </div>
       {label && <span className="presence-label">{label}</span>}

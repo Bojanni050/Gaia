@@ -274,6 +274,10 @@
   position: absolute; width: 100%; height: 100%; border-radius: 50%;
   background: radial-gradient(circle, rgba(203, 163, 106, 0.28), transparent 68%);
 }
+.presence-halo.faint {
+  background: radial-gradient(circle at 60% 40%, rgba(231, 197, 140, 0.14), transparent 60%);
+  opacity: 0.5;
+}
 .presence-label { font-family: var(--serif); font-style: italic; color: var(--text-faint); font-size: 0.88rem; }
 
 /* ---------------------------------------------------------------- artifact canvas */

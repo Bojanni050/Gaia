@@ -10,7 +10,7 @@ export default function Threads({ conversations, activeId, onSelect, onNew, onDe
       </div>
 
       <button className="new-thread-btn" onClick={onNew} data-testid="new-conversation-btn">
-        <Plus size={16} /> New conversation
+        <Plus size={16} /> New page
       </button>
 
       <div className="thread-list" data-testid="thread-list">
@@ -21,7 +21,7 @@ export default function Threads({ conversations, activeId, onSelect, onNew, onDe
             onClick={() => onSelect(c.id)}
             data-testid="thread-item"
           >
-            <span className="thread-title">{c.title || 'New conversation'}</span>
+            <span className="thread-title">{c.title || 'Untitled'}</span>
             <button
               className="thread-delete"
               onClick={(e) => { e.stopPropagation(); onDelete(c.id); }}
