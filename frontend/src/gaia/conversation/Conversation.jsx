@@ -1,4 +1,5 @@
 import React, { useEffect, useMemo, useRef, useState } from 'react';
+import { motion } from 'framer-motion';
 import MessageView from './MessageView';
 import Composer from './Composer';
 import Presence from '../presence/Presence';
@@ -27,9 +28,29 @@ export default function Conversation({
         <div className="conversation-column">
           {empty ? (
             <div className="welcome" data-testid="welcome">
-              <Presence state={inputFocused ? 'listening' : 'resting'} size={72} />
-              <h1 className="welcome-title">{greeting.title}</h1>
-              <p className="welcome-sub">{greeting.sub}</p>
+              <motion.div
+                initial={{ opacity: 0, scale: 0.85 }}
+                animate={{ opacity: 1, scale: 1 }}
+                transition={{ duration: 1.4, ease: 'easeOut' }}
+              >
+                <Presence state={inputFocused ? 'listening' : 'resting'} size={72} />
+              </motion.div>
+              <motion.h1
+                className="welcome-title"
+                initial={{ opacity: 0, y: 12 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ duration: 1.0, delay: 0.7, ease: 'easeOut' }}
+              >
+                {greeting.title}
+              </motion.h1>
+              <motion.p
+                className="welcome-sub"
+                initial={{ opacity: 0, y: 12 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ duration: 1.0, delay: 1.15, ease: 'easeOut' }}
+              >
+                {greeting.sub}
+              </motion.p>
             </div>
           ) : (
             <>

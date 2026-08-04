@@ -5,6 +5,7 @@ import ToolCard from './ToolCard';
 import ArtifactCard from './ArtifactCard';
 import { parseSegments } from '../lib/artifactParser';
 import { fileUrl } from '../lib/api';
+import { L } from '../lib/lexicon';
 
 function Attachments({ items }) {
   if (!items || !items.length) return null;
@@ -19,8 +20,11 @@ function Attachments({ items }) {
   );
 }
 
-function AssistantBody({ content, tools, onOpenArtifact, activeArtifact }) {
+function AssistantBody({ content, tools, messageId, onOpenArtifact, activeArtifact }) {
   const segments = parseSegments(content);
+  const openWith = (seg) => onOpenArtifact({ ...seg, messageId });
+  const isActive = (seg) => activeArtifact
+    && activeArtifact.messageId === messageId && activeArtifact.ordinal === seg.ordinal;
   return (
     <>
       {tools && tools.length > 0 && (
@@ -29,8 +33,7 @@ function AssistantBody({ content, tools, onOpenArtifact, activeArtifact }) {
       {segments.map((seg, i) => (
         seg.kind === 'text'
           ? <Markdown key={i}>{seg.value}</Markdown>
-          : <ArtifactCard key={i} segment={seg} onOpen={onOpenArtifact}
-              active={activeArtifact && activeArtifact.meta.title === seg.meta.title} />
+          : <ArtifactCard key={i} segment={seg} onOpen={openWith} active={isActive(seg)} />
       ))}
     </>
   );
@@ -75,23 +78,23 @@ export default function MessageView({ message, tools, streaming, onRetry, onEdit
           <div className="msg-body">
             {isUser
               ? <p className="user-text">{message.content}</p>
-              : <AssistantBody content={message.content} tools={tools} onOpenArtifact={onOpenArtifact} activeArtifact={activeArtifact} />}
+              : <AssistantBody content={message.content} tools={tools} messageId={message.id} onOpenArtifact={onOpenArtifact} activeArtifact={activeArtifact} />}
             <Attachments items={message.attachments} />
           </div>
         )}
 
         {!streaming && !editing && (
           <div className="msg-actions">
-            <button className="msg-action" onClick={copy} data-testid="message-copy-btn" title="Copy">
+            <button className="msg-action" onClick={copy} data-testid="message-copy-btn" title={L.keep}>
               {copied ? <Check size={13} /> : <Copy size={13} />}
             </button>
             {isUser && (
-              <button className="msg-action" onClick={() => setEditing(true)} data-testid="message-edit-btn" title="Edit & resend">
+              <button className="msg-action" onClick={() => setEditing(true)} data-testid="message-edit-btn" title={L.revise}>
                 <Pencil size={13} />
               </button>
             )}
             {!isUser && (
-              <button className="msg-action" onClick={() => onRetry(message.id)} data-testid="message-retry-btn" title="Ask again">
+              <button className="msg-action" onClick={() => onRetry(message.id)} data-testid="message-retry-btn" title={L.reconsider}>
                 <RotateCcw size={13} />
               </button>
             )}

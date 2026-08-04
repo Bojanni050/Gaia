@@ -32,13 +32,13 @@ export function parseSegments(text) {
     const closeAt = afterOpen.indexOf(CLOSE);
     if (closeAt === -1) {
       segments.push({
-        kind: 'artifact', id: `art-${index}`, meta,
+        kind: 'artifact', id: `art-${index}`, ordinal: index, meta,
         content: afterOpen.replace(/^\n/, ''), complete: false,
       });
       break;
     }
     const content = afterOpen.slice(0, closeAt).replace(/^\n/, '').replace(/\n$/, '');
-    segments.push({ kind: 'artifact', id: `art-${index}`, meta, content, complete: true });
+    segments.push({ kind: 'artifact', id: `art-${index}`, ordinal: index, meta, content, complete: true });
     rest = afterOpen.slice(closeAt + CLOSE.length);
     index += 1;
   }

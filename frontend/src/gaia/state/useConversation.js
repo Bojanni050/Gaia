@@ -11,6 +11,7 @@ export function useConversation() {
   const [messages, setMessages] = useState([]);
   const [stream, setStream] = useState(emptyStream);
   const [canvas, setCanvas] = useState({ open: false, artifact: null });
+  const [memory, setMemory] = useState({ open: false, loading: false, reflections: [] });
   const [booting, setBooting] = useState(true);
 
   const abortRef = useRef(null);
@@ -82,6 +83,9 @@ export function useConversation() {
 
     const artifacts = extractArtifacts(finalContentRef.current);
     if (artifacts.length) setCanvas({ open: true, artifact: artifacts[artifacts.length - 1] });
+
+    // Hindsight quietly reflects on the exchange — best-effort, never blocking.
+    hermes.reflect(convId);
   }, [openConversation, refreshConversations]);
 
   const send = useCallback(async (text, files = []) => {
@@ -119,6 +123,26 @@ export function useConversation() {
   const openArtifact = useCallback((artifact) => setCanvas({ open: true, artifact }), []);
   const closeCanvas = useCallback(() => setCanvas((c) => ({ ...c, open: false })), []);
 
+  const editArtifact = useCallback(async (messageId, ordinal, content) => {
+    if (!messageId || messageId === 'streaming') return;
+    const res = await hermes.editArtifact(activeId, messageId, ordinal, content);
+    if (res && res.content != null) {
+      setMessages((m) => m.map((x) => (x.id === messageId ? { ...x, content: res.content } : x)));
+    }
+    setCanvas((c) => ({ ...c, artifact: c.artifact ? { ...c.artifact, content } : c.artifact }));
+  }, [activeId]);
+
+  const openMemory = useCallback(async () => {
+    setMemory((s) => ({ ...s, open: true, loading: true }));
+    const data = await hermes.listReflections();
+    setMemory({ open: true, loading: false, reflections: data.reflections || [] });
+  }, []);
+  const closeMemory = useCallback(() => setMemory((s) => ({ ...s, open: false })), []);
+  const forgetReflection = useCallback(async (id) => {
+    setMemory((s) => ({ ...s, reflections: s.reflections.filter((r) => r.id !== id) }));
+    await hermes.forgetReflection(id);
+  }, []);
+
   useEffect(() => {
     (async () => {
       const list = await refreshConversations();
@@ -130,8 +154,9 @@ export function useConversation() {
   }, []);
 
   return {
-    conversations, activeId, messages, stream, canvas, booting,
+    conversations, activeId, messages, stream, canvas, memory, booting,
     newConversation, openConversation, deleteConversation,
-    send, retry, editUser, stop, openArtifact, closeCanvas,
+    send, retry, editUser, stop, openArtifact, closeCanvas, editArtifact,
+    openMemory, closeMemory, forgetReflection,
   };
 }

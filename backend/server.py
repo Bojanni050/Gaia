@@ -12,6 +12,7 @@ from starlette.middleware.cors import CORSMiddleware
 from motor.motor_asyncio import AsyncIOMotorClient
 import os
 import io
+import re
 import ast
 import json
 import uuid
@@ -486,6 +487,137 @@ async def stream_message(conversation_id: str, req: StreamRequest):
         media_type="text/event-stream",
         headers={"Cache-Control": "no-cache", "X-Accel-Buffering": "no", "Connection": "keep-alive"},
     )
+
+
+# ---------------------------------------------------------------------------
+# Living canvas — edit an artifact inside a saved assistant message
+# ---------------------------------------------------------------------------
+ART_RE = re.compile(r"(【artifact[^】]*】)([\s\S]*?)(【/artifact】)")
+
+
+def replace_nth_artifact(content: str, ordinal: int, new_inner: str) -> str:
+    counter = {"i": 0}
+
+    def repl(m):
+        cur = counter["i"]
+        counter["i"] += 1
+        if cur == ordinal:
+            return m.group(1) + "\n" + new_inner.strip() + "\n" + m.group(3)
+        return m.group(0)
+
+    return ART_RE.sub(repl, content)
+
+
+class ArtifactEdit(BaseModel):
+    ordinal: int = 0
+    content: str
+
+
+@api_router.patch("/hermes/conversations/{conversation_id}/messages/{message_id}/artifact")
+async def edit_artifact(conversation_id: str, message_id: str, body: ArtifactEdit):
+    msg = await db.messages.find_one({"id": message_id, "conversation_id": conversation_id}, {"_id": 0})
+    if not msg:
+        raise HTTPException(status_code=404, detail="message not found")
+    new_content = replace_nth_artifact(msg.get("content", ""), body.ordinal, body.content)
+    await db.messages.update_one({"id": message_id}, {"$set": {"content": new_content}})
+    return {"id": message_id, "content": new_content}
+
+
+# ---------------------------------------------------------------------------
+# Hindsight — minimal reflective memory (understanding, not logging)
+# ---------------------------------------------------------------------------
+VALID_DOMAINS = {"preferences", "patterns", "context", "relationships"}
+
+REFLECT_SYSTEM = """You quietly help Gaia understand one person over time.
+Given a recent exchange, extract ONLY durable understandings about the user that are worth remembering for years — stable preferences, how they think or communicate, recurring patterns, meaningful ongoing context, or important relationships.
+Ignore transient task details, one-off requests, and anything about you (Gaia).
+Return STRICT JSON only, no prose:
+{"reflections":[{"domain":"preferences|patterns|context|relationships","summary":"one calm sentence, third person, about the user","confidence":0.0}]}
+If nothing durable is present, return {"reflections":[]}. Never invent."""
+
+
+class Reflection(BaseModel):
+    id: str = Field(default_factory=lambda: str(uuid.uuid4()))
+    domain: str
+    summary: str
+    confidence: float = 0.6
+    conversation_id: str
+    source_message_id: Optional[str] = None
+    source_excerpt: str = ""
+    observed_at: str = Field(default_factory=lambda: datetime.now(timezone.utc).isoformat())
+
+
+class ReflectRequest(BaseModel):
+    conversation_id: str
+
+
+def _parse_json_block(text: str) -> dict:
+    t = (text or "").strip()
+    if t.startswith("```"):
+        t = re.sub(r"^```[a-zA-Z]*\n?", "", t).rstrip("`").strip()
+    try:
+        return json.loads(t)
+    except Exception:  # noqa: BLE001
+        m = re.search(r"\{[\s\S]*\}", t)
+        if m:
+            try:
+                return json.loads(m.group(0))
+            except Exception:  # noqa: BLE001
+                return {}
+    return {}
+
+
+@api_router.post("/hindsight/reflect")
+async def hindsight_reflect(req: ReflectRequest):
+    msgs = await db.messages.find({"conversation_id": req.conversation_id}, {"_id": 0}).sort("created_at", 1).to_list(1000)
+    if len(msgs) < 2:
+        return {"reflections": []}
+    last_user = next((m for m in reversed(msgs) if m["role"] == "user"), None)
+    exchange = _build_transcript(msgs[-4:])
+    created = []
+    try:
+        chat = (
+            LlmChat(api_key=EMERGENT_KEY, session_id=f"reflect:{req.conversation_id}:{uuid.uuid4()}",
+                    system_message=REFLECT_SYSTEM)
+            .with_model(HERMES_PROVIDER, HERMES_MODEL)
+            .with_params(reasoning_effort="none")
+        )
+        raw = await chat.send_message(UserMessage(text=exchange))
+        data = _parse_json_block(str(raw))
+        for item in (data.get("reflections") or [])[:3]:
+            summary = (item.get("summary") or "").strip()
+            if not summary:
+                continue
+            domain = item.get("domain") if item.get("domain") in VALID_DOMAINS else "context"
+            dup = await db.reflections.find_one(
+                {"summary": {"$regex": f"^{re.escape(summary)}$", "$options": "i"}}
+            )
+            if dup:
+                continue
+            ref = Reflection(
+                domain=domain, summary=summary,
+                confidence=float(item.get("confidence", 0.6) or 0.6),
+                conversation_id=req.conversation_id,
+                source_message_id=last_user["id"] if last_user else None,
+                source_excerpt=(last_user.get("content", "")[:160] if last_user else ""),
+            )
+            await db.reflections.insert_one(ref.model_dump())
+            created.append(ref.model_dump())
+    except Exception as e:  # noqa: BLE001
+        logger.warning(f"reflection failed: {e}")
+    return {"reflections": created}
+
+
+@api_router.get("/hindsight/reflections")
+async def list_reflections():
+    docs = await db.reflections.find({}, {"_id": 0}).sort("observed_at", -1).to_list(500)
+    return {"reflections": docs}
+
+
+@api_router.delete("/hindsight/reflections/{reflection_id}")
+async def forget_reflection(reflection_id: str):
+    await db.reflections.delete_one({"id": reflection_id})
+    return {"forgotten": reflection_id}
 
 
 app.include_router(api_router)

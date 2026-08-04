@@ -3,19 +3,27 @@ import { AnimatePresence, motion } from 'framer-motion';
 import Threads from './sidebar/Threads';
 import Conversation from './conversation/Conversation';
 import ArtifactCanvas from './artifacts/ArtifactCanvas';
+import MemoryDrawer from './memory/MemoryDrawer';
 import { useConversation } from './state/useConversation';
 
 export default function GaiaDesktop() {
   const g = useConversation();
 
   return (
-    <div className={`gaia-shell${g.canvas.open ? ' with-canvas' : ''}`} data-testid="gaia-shell">
+    <motion.div
+      className={`gaia-shell${g.canvas.open ? ' with-canvas' : ''}`}
+      data-testid="gaia-shell"
+      initial={{ opacity: 0 }}
+      animate={{ opacity: 1 }}
+      transition={{ duration: 1.0, ease: 'easeOut' }}
+    >
       <Threads
         conversations={g.conversations}
         activeId={g.activeId}
         onSelect={g.openConversation}
         onNew={g.newConversation}
         onDelete={g.deleteConversation}
+        onOpenMemory={g.openMemory}
       />
 
       <main className="gaia-main">
@@ -40,10 +48,16 @@ export default function GaiaDesktop() {
             exit={{ width: 0, opacity: 0 }}
             transition={{ duration: 0.35, ease: [0.22, 1, 0.36, 1] }}
           >
-            <ArtifactCanvas artifact={g.canvas.artifact} onClose={g.closeCanvas} />
+            <ArtifactCanvas artifact={g.canvas.artifact} onClose={g.closeCanvas} onEdit={g.editArtifact} />
           </motion.div>
         )}
       </AnimatePresence>
-    </div>
+
+      <AnimatePresence>
+        {g.memory.open && (
+          <MemoryDrawer memory={g.memory} onClose={g.closeMemory} onForget={g.forgetReflection} />
+        )}
+      </AnimatePresence>
+    </motion.div>
   );
 }

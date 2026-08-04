@@ -54,4 +54,29 @@ export const hermes = {
       }
     }
   },
+
+  async editArtifact(conversationId, messageId, ordinal, content) {
+    const res = await fetch(
+      `${API}/hermes/conversations/${conversationId}/messages/${messageId}/artifact`,
+      { method: 'PATCH', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ ordinal, content }) },
+    );
+    return res.json();
+  },
+
+  // Hindsight — reflective memory
+  async reflect(conversationId) {
+    try {
+      await fetch(`${API}/hindsight/reflect`, {
+        method: 'POST', headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ conversation_id: conversationId }),
+      });
+    } catch (_) { /* memory is best-effort, never blocks the conversation */ }
+  },
+  async listReflections() {
+    const res = await fetch(`${API}/hindsight/reflections`);
+    return res.json();
+  },
+  async forgetReflection(id) {
+    await fetch(`${API}/hindsight/reflections/${id}`, { method: 'DELETE' });
+  },
 };
