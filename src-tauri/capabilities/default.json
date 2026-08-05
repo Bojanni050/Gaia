@@ -1,0 +1,10 @@
+{
+  "$schema": "../gen/schemas/desktop-schema.json",
+  "identifier": "default",
+  "description": "Default capabilities for Gaia — the shell only needs window state; all reasoning, memory, and identity live in the frontend.",
+  "windows": ["main"],
+  "permissions": [
+    "core:default",
+    "window-state:default"
+  ]
+}

@@ -5,22 +5,22 @@ import Composer from './Composer';
 import Presence from '../presence/Presence';
 import { getGreeting } from '../lib/greeting';
 
-const PRESENCE_WORD = { thinking: 'thinking', speaking: 'speaking', listening: 'listening', resting: '' };
+const PRESENCE_WORD = { thinking: 'thinking', speaking: 'speaking', listening: 'listening', quiet: '' };
 
-export default function Conversation({
-  messages, stream, onSend, onStop, onRetry, onEdit, onOpenArtifact, activeArtifact,
-}) {
+export default function Conversation({ messages, stream, health, onSend, onStop }) {
   const scrollRef = useRef(null);
-  const [inputFocused, setInputFocused] = useState(false);
   const greeting = useMemo(() => getGreeting(), []);
+  const [hasDraft, setHasDraft] = useState(false);
 
   useEffect(() => {
     const el = scrollRef.current;
     if (el) el.scrollTo({ top: el.scrollHeight, behavior: 'smooth' });
-  }, [messages, stream.content, stream.tools]);
+  }, [messages, stream.content]);
 
   const empty = messages.length === 0 && !stream.active;
-  const presenceState = stream.active ? stream.presence : (inputFocused ? 'listening' : 'resting');
+  const presenceState = stream.active
+    ? stream.presence
+    : (hasDraft ? 'listening' : 'quiet');
 
   return (
     <section className="conversation" data-testid="conversation">
@@ -33,7 +33,7 @@ export default function Conversation({
                 animate={{ opacity: 1, scale: 1 }}
                 transition={{ duration: 1.4, ease: 'easeOut' }}
               >
-                <Presence state={inputFocused ? 'listening' : 'resting'} size={72} />
+                <Presence state="quiet" size={72} />
               </motion.div>
               <motion.h1
                 className="welcome-title"
@@ -55,26 +55,12 @@ export default function Conversation({
           ) : (
             <>
               {messages.map((m) => (
-                <MessageView
-                  key={m.id}
-                  message={m}
-                  tools={m.tool_calls}
-                  streaming={false}
-                  onRetry={onRetry}
-                  onEdit={onEdit}
-                  onOpenArtifact={onOpenArtifact}
-                  activeArtifact={activeArtifact}
-                />
+                <MessageView key={m.id} message={m} streaming={false} />
               ))}
               {stream.active && (
                 <MessageView
-                  message={{ id: 'streaming', role: 'assistant', content: stream.content, attachments: [] }}
-                  tools={stream.tools}
+                  message={{ id: stream.messageId || 'streaming', role: 'assistant', content: stream.content }}
                   streaming
-                  onRetry={onRetry}
-                  onEdit={onEdit}
-                  onOpenArtifact={onOpenArtifact}
-                  activeArtifact={activeArtifact}
                 />
               )}
               {stream.active && !stream.content && (
@@ -88,6 +74,13 @@ export default function Conversation({
         </div>
       </div>
 
+      {health && health.status === 'unreachable' && (
+        <div className="health-whisper" data-testid="health-whisper" role="status">
+          <Presence state="quiet" size={18} />
+          <span>I can&apos;t reach my reason engine right now. Take your time — I&apos;m here when you&apos;re ready to try again.</span>
+        </div>
+      )}
+
       <div className="composer-dock">
         <div className="conversation-column">
           <div className="dock-presence">
@@ -97,7 +90,7 @@ export default function Conversation({
             onSend={onSend}
             onStop={onStop}
             streaming={stream.active}
-            onFocusChange={setInputFocused}
+            onDraftChange={setHasDraft}
           />
         </div>
       </div>

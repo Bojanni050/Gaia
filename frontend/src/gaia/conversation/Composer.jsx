@@ -1,24 +1,28 @@
-import React, { useRef, useState } from 'react';
-import { ArrowUp, Paperclip, Square, X, FileText } from 'lucide-react';
+import React, { useEffect, useRef, useState } from 'react';
+import { ArrowUp, Square } from 'lucide-react';
 
 /**
  * Composer — the always-ready place to think with Gaia.
- * Enter sends; Shift+Enter for a newline. Uploads persist to object storage.
+ * Enter sends; Shift+Enter for a newline.
+ *
+ * The composer reports draft state to its parent so the orb can shift from
+ * "quiet" to "listening" the moment the user begins to type.
  */
-export default function Composer({ onSend, onStop, streaming, onFocusChange }) {
+export default function Composer({ onSend, onStop, streaming, onDraftChange }) {
   const [text, setText] = useState('');
-  const [files, setFiles] = useState([]);
   const taRef = useRef(null);
-  const fileRef = useRef(null);
+
+  useEffect(() => {
+    if (onDraftChange) onDraftChange(text.trim().length > 0);
+  }, [text, onDraftChange]);
 
   const grow = (el) => { el.style.height = 'auto'; el.style.height = `${Math.min(el.scrollHeight, 220)}px`; };
 
   const submit = () => {
     const t = text.trim();
-    if ((!t && files.length === 0) || streaming) return;
-    onSend(t, files);
+    if (!t || streaming) return;
+    onSend(t);
     setText('');
-    setFiles([]);
     if (taRef.current) taRef.current.style.height = 'auto';
   };
 
@@ -26,39 +30,9 @@ export default function Composer({ onSend, onStop, streaming, onFocusChange }) {
     if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); submit(); }
   };
 
-  const addFiles = (list) => setFiles((f) => [...f, ...Array.from(list)]);
-
   return (
     <div className="composer-wrap">
-      {files.length > 0 && (
-        <div className="composer-chips" data-testid="composer-chips">
-          {files.map((f, i) => (
-            <span key={i} className="attach-chip">
-              <FileText size={13} /> {f.name}
-              <button onClick={() => setFiles((x) => x.filter((_, j) => j !== i))} aria-label="Remove" data-testid="remove-attachment-btn"><X size={12} /></button>
-            </span>
-          ))}
-        </div>
-      )}
       <div className="composer">
-        <button
-          className="composer-attach"
-          onClick={() => fileRef.current?.click()}
-          data-testid="attach-btn"
-          aria-label="Attach a file"
-          disabled={streaming}
-        >
-          <Paperclip size={18} />
-        </button>
-        <input
-          ref={fileRef}
-          type="file"
-          multiple
-          hidden
-          accept="image/*,.pdf,.txt,.md,.csv,.json"
-          onChange={(e) => { addFiles(e.target.files); e.target.value = ''; }}
-          data-testid="file-input"
-        />
         <textarea
           ref={taRef}
           className="composer-input"
@@ -66,8 +40,6 @@ export default function Composer({ onSend, onStop, streaming, onFocusChange }) {
           value={text}
           onChange={(e) => { setText(e.target.value); grow(e.target); }}
           onKeyDown={onKey}
-          onFocus={() => onFocusChange?.(true)}
-          onBlur={() => onFocusChange?.(false)}
           rows={1}
           data-testid="composer-input"
         />
@@ -79,7 +51,7 @@ export default function Composer({ onSend, onStop, streaming, onFocusChange }) {
           <button
             className="composer-send"
             onClick={submit}
-            disabled={!text.trim() && files.length === 0}
+            disabled={!text.trim()}
             data-testid="send-btn"
             aria-label="Send"
           >

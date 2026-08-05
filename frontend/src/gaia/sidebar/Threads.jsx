@@ -1,8 +1,8 @@
 import React from 'react';
-import { Plus, Trash2, Sparkles } from 'lucide-react';
+import { Plus, Trash2 } from 'lucide-react';
 import { L } from '../lib/lexicon';
 
-export default function Threads({ conversations, activeId, onSelect, onNew, onDelete, onOpenMemory }) {
+export default function Threads({ conversations, activeId, onSelect, onNew, onDelete }) {
   return (
     <nav className="sidebar" data-testid="sidebar">
       <div className="brand">
@@ -34,10 +34,6 @@ export default function Threads({ conversations, activeId, onSelect, onNew, onDe
           </div>
         ))}
       </div>
-
-      <button className="memory-entry" onClick={onOpenMemory} data-testid="open-memory-btn">
-        <Sparkles size={15} /> {L.memoryOpen}
-      </button>
 
       <div className="sidebar-foot">
         <span className="foot-line">A lifelong personal intelligence,</span>

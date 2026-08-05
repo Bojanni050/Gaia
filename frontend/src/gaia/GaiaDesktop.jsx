@@ -1,9 +1,7 @@
 import React from 'react';
-import { AnimatePresence, motion } from 'framer-motion';
+import { motion } from 'framer-motion';
 import Threads from './sidebar/Threads';
 import Conversation from './conversation/Conversation';
-import ArtifactCanvas from './artifacts/ArtifactCanvas';
-import MemoryDrawer from './memory/MemoryDrawer';
 import { useConversation } from './state/useConversation';
 
 export default function GaiaDesktop() {
@@ -11,7 +9,7 @@ export default function GaiaDesktop() {
 
   return (
     <motion.div
-      className={`gaia-shell${g.canvas.open ? ' with-canvas' : ''}`}
+      className="gaia-shell"
       data-testid="gaia-shell"
       initial={{ opacity: 0 }}
       animate={{ opacity: 1 }}
@@ -21,43 +19,19 @@ export default function GaiaDesktop() {
         conversations={g.conversations}
         activeId={g.activeId}
         onSelect={g.openConversation}
-        onNew={g.newConversation}
+        onNew={() => g.newConversation('')}
         onDelete={g.deleteConversation}
-        onOpenMemory={g.openMemory}
       />
 
       <main className="gaia-main">
         <Conversation
           messages={g.messages}
           stream={g.stream}
+          health={g.health}
           onSend={g.send}
           onStop={g.stop}
-          onRetry={g.retry}
-          onEdit={g.editUser}
-          onOpenArtifact={g.openArtifact}
-          activeArtifact={g.canvas.open ? g.canvas.artifact : null}
         />
       </main>
-
-      <AnimatePresence>
-        {g.canvas.open && (
-          <motion.div
-            className="canvas-slot"
-            initial={{ width: 0, opacity: 0 }}
-            animate={{ width: 460, opacity: 1 }}
-            exit={{ width: 0, opacity: 0 }}
-            transition={{ duration: 0.35, ease: [0.22, 1, 0.36, 1] }}
-          >
-            <ArtifactCanvas artifact={g.canvas.artifact} onClose={g.closeCanvas} onEdit={g.editArtifact} />
-          </motion.div>
-        )}
-      </AnimatePresence>
-
-      <AnimatePresence>
-        {g.memory.open && (
-          <MemoryDrawer memory={g.memory} onClose={g.closeMemory} onForget={g.forgetReflection} />
-        )}
-      </AnimatePresence>
     </motion.div>
   );
 }

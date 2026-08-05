@@ -1,168 +1,182 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
-import { hermes } from '../lib/hermesClient';
-import { uploadFile } from '../lib/api';
-import { extractArtifacts } from '../lib/artifactParser';
+import { getReasoningProvider } from '../integration/reasoning';
+import { SOUL_SYSTEM } from '../identity/soul';
+import { phraseReasoningError } from '../presence/errorPhrases';
 
-const emptyStream = { active: false, messageId: null, content: '', tools: [], presence: 'resting' };
+const emptyStream = { active: false, messageId: null, content: '', presence: 'quiet' };
+const PRESENCE_THINKING = 'thinking';
+const PRESENCE_SPEAKING = 'speaking';
 
+function makeId() {
+  return `m-${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 8)}`;
+}
+
+function titleFrom(text) {
+  const t = (text || '').trim();
+  if (!t) return 'A new page';
+  return t.split(/\s+/).slice(0, 7).join(' ').slice(0, 60);
+}
+
+/**
+ * useConversation — Gaia's conversational state, in memory.
+ *
+ * The state is intentionally simple for this milestone: a list of in-memory
+ * conversations, the active one, and a streaming channel to the reasoning
+ * provider. Persistence, memory, knowledge, and tools are out of scope here.
+ *
+ * On mount, the provider's health is probed. A calm, Gaia-language status
+ * is exposed so the desktop can surface (or quietly not surface) it.
+ */
 export function useConversation() {
+  const provider = useRef(getReasoningProvider()).current;
+
   const [conversations, setConversations] = useState([]);
   const [activeId, setActiveId] = useState(null);
-  const [messages, setMessages] = useState([]);
+  const [byConv, setByConv] = useState({});
   const [stream, setStream] = useState(emptyStream);
-  const [canvas, setCanvas] = useState({ open: false, artifact: null });
-  const [memory, setMemory] = useState({ open: false, loading: false, reflections: [] });
-  const [booting, setBooting] = useState(true);
+  const [health, setHealth] = useState({ status: 'unknown' });
 
   const abortRef = useRef(null);
-  const finalContentRef = useRef('');
-  const memoryOpenRef = useRef(false);
-  useEffect(() => { memoryOpenRef.current = memory.open; }, [memory.open]);
-
-  const loadReflections = useCallback(async () => {
-    const data = await hermes.listReflections();
-    setMemory((s) => ({ ...s, loading: false, reflections: data.reflections || [] }));
-  }, []);
-
-  const refreshConversations = useCallback(async () => {
-    const list = await hermes.listConversations();
-    setConversations(list);
-    return list;
-  }, []);
-
-  const openConversation = useCallback(async (id, { silent } = {}) => {
-    const data = await hermes.getConversation(id);
-    setActiveId(id);
-    setMessages(data.messages || []);
-    if (!silent) setCanvas({ open: false, artifact: null });
-    return data.messages || [];
-  }, []);
-
-  const newConversation = useCallback(async () => {
-    const conv = await hermes.createConversation();
-    await refreshConversations();
-    setActiveId(conv.id);
-    setMessages([]);
-    setCanvas({ open: false, artifact: null });
-    return conv.id;
-  }, [refreshConversations]);
-
-  const deleteConversation = useCallback(async (id) => {
-    await hermes.deleteConversation(id);
-    const list = await refreshConversations();
-    if (id === activeId) {
-      if (list.length) await openConversation(list[0].id);
-      else await newConversation();
-    }
-  }, [activeId, openConversation, newConversation, refreshConversations]);
-
-  const runStream = useCallback(async (convId, body) => {
-    finalContentRef.current = '';
-    setStream({ ...emptyStream, active: true, presence: 'thinking' });
-    const controller = new AbortController();
-    abortRef.current = controller;
-    try {
-      await hermes.stream(convId, body, (e) => {
-        if (e.type === 'start') setStream((s) => ({ ...s, messageId: e.message_id }));
-        else if (e.type === 'presence') setStream((s) => ({ ...s, presence: e.state }));
-        else if (e.type === 'delta') {
-          finalContentRef.current += e.content;
-          setStream((s) => ({ ...s, content: s.content + e.content }));
-        } else if (e.type === 'tool') {
-          setStream((s) => {
-            const tools = [...s.tools];
-            const i = tools.findIndex((t) => t.id === e.id);
-            const rec = { id: e.id, name: e.name, status: e.status, args: e.args, result: e.result };
-            if (i === -1) tools.push(rec); else tools[i] = rec;
-            return { ...s, tools };
-          });
-        } else if (e.type === 'error') {
-          finalContentRef.current += `\n\n_(Gaia is momentarily unreachable: ${e.message})_`;
-          setStream((s) => ({ ...s, content: s.content + `\n\n_(Gaia is momentarily unreachable.)_` }));
-        }
-      }, controller.signal);
-    } catch (_) { /* aborted or network */ }
-
-    abortRef.current = null;
-    setStream(emptyStream);
-    await openConversation(convId, { silent: true });
-    await refreshConversations();
-
-    const artifacts = extractArtifacts(finalContentRef.current);
-    if (artifacts.length) setCanvas({ open: true, artifact: artifacts[artifacts.length - 1] });
-
-    // Hindsight quietly reflects on the exchange — best-effort, never blocking.
-    hermes.reflect(convId).then(() => { if (memoryOpenRef.current) loadReflections(); });
-  }, [openConversation, refreshConversations, loadReflections]);
-
-  const send = useCallback(async (text, files = []) => {
-    let convId = activeId;
-    if (!convId) convId = await newConversation();
-    let atts = [];
-    if (files.length) atts = await Promise.all(files.map(uploadFile));
-    const optimistic = {
-      id: `tmp-${Date.now()}`, role: 'user', content: text,
-      attachments: atts, created_at: new Date().toISOString(),
-    };
-    setMessages((m) => [...m, optimistic]);
-    await runStream(convId, { content: text, attachment_ids: atts.map((a) => a.id) });
-  }, [activeId, newConversation, runStream]);
-
-  const retry = useCallback(async (assistantId) => {
-    setMessages((m) => {
-      const i = m.findIndex((x) => x.id === assistantId);
-      return i === -1 ? m : m.slice(0, i);
-    });
-    await runStream(activeId, { truncate_from_message_id: assistantId, resend_last_user: true });
-  }, [activeId, runStream]);
-
-  const editUser = useCallback(async (messageId, newText) => {
-    setMessages((m) => {
-      const i = m.findIndex((x) => x.id === messageId);
-      const base = i === -1 ? m : m.slice(0, i);
-      return [...base, { id: `tmp-${Date.now()}`, role: 'user', content: newText, attachments: [], created_at: new Date().toISOString() }];
-    });
-    await runStream(activeId, { truncate_from_message_id: messageId, content: newText });
-  }, [activeId, runStream]);
-
-  const stop = useCallback(() => { if (abortRef.current) abortRef.current.abort(); }, []);
-
-  const openArtifact = useCallback((artifact) => setCanvas({ open: true, artifact }), []);
-  const closeCanvas = useCallback(() => setCanvas((c) => ({ ...c, open: false })), []);
-
-  const editArtifact = useCallback(async (messageId, ordinal, content) => {
-    if (!messageId || messageId === 'streaming') return;
-    const res = await hermes.editArtifact(activeId, messageId, ordinal, content);
-    if (res && res.content != null) {
-      setMessages((m) => m.map((x) => (x.id === messageId ? { ...x, content: res.content } : x)));
-    }
-    setCanvas((c) => ({ ...c, artifact: c.artifact ? { ...c.artifact, content } : c.artifact }));
-  }, [activeId]);
-
-  const openMemory = useCallback(async () => {
-    setMemory((s) => ({ ...s, open: true, loading: true }));
-    await loadReflections();
-  }, [loadReflections]);
-  const closeMemory = useCallback(() => setMemory((s) => ({ ...s, open: false })), []);
-  const forgetReflection = useCallback(async (id) => {
-    setMemory((s) => ({ ...s, reflections: s.reflections.filter((r) => r.id !== id) }));
-    await hermes.forgetReflection(id);
-  }, []);
 
   useEffect(() => {
-    (async () => {
-      const list = await refreshConversations();
-      if (list.length) await openConversation(list[0].id);
-      else await newConversation();
-      setBooting(false);
-    })();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
+    let cancelled = false;
+    provider.health().then((h) => {
+      if (cancelled) return;
+      setHealth({ status: h.ok ? 'ready' : 'unreachable', detail: h.detail });
+    }).catch(() => {
+      if (cancelled) return;
+      setHealth({ status: 'unreachable', detail: 'cannot reach reason engine' });
+    });
+    return () => { cancelled = true; };
+  }, [provider]);
+
+  const messages = activeId ? (byConv[activeId] || []) : [];
+
+  const newConversation = useCallback((seed) => {
+    const conv = { id: makeId(), title: titleFrom(seed || ''), createdAt: Date.now() };
+    setConversations((c) => [conv, ...c]);
+    setActiveId(conv.id);
+    setStream(emptyStream);
+    return conv.id;
   }, []);
 
+  const openConversation = useCallback((id) => {
+    setActiveId(id);
+    setStream(emptyStream);
+  }, []);
+
+  const deleteConversation = useCallback((id) => {
+    setConversations((c) => c.filter((x) => x.id !== id));
+    setByConv((prev) => {
+      const { [id]: _removed, ...rest } = prev;
+      return rest;
+    });
+    setActiveId((current) => (current === id ? null : current));
+  }, []);
+
+  const stop = useCallback(() => {
+    if (abortRef.current) abortRef.current.abort();
+  }, []);
+
+  const runStream = useCallback(async (convId, transcript) => {
+    const controller = new AbortController();
+    abortRef.current = controller;
+
+    const assistantId = makeId();
+    setStream({ active: true, messageId: assistantId, content: '', presence: PRESENCE_THINKING });
+
+    let fullText = '';
+    try {
+      await provider.stream(transcript, {
+        signal: controller.signal,
+        onDelta: (chunk) => {
+          fullText += chunk;
+          setStream((s) => (
+            s.presence === PRESENCE_SPEAKING
+              ? { ...s, content: s.content + chunk }
+              : { ...s, presence: PRESENCE_SPEAKING, content: s.content + chunk }
+          ));
+        },
+      });
+
+      if (controller.signal.aborted) {
+        setStream(emptyStream);
+        return null;
+      }
+
+      setByConv((prev) => {
+        const current = prev[convId] || [];
+        return {
+          ...prev,
+          [convId]: [
+            ...current,
+            { id: assistantId, role: 'assistant', content: fullText, createdAt: Date.now() },
+          ],
+        };
+      });
+      setStream(emptyStream);
+      return fullText;
+    } catch (e) {
+      if (controller.signal.aborted) {
+        setStream(emptyStream);
+        return null;
+      }
+      const phrase = phraseReasoningError(e);
+      setStream(emptyStream);
+      setByConv((prev) => {
+        const current = prev[convId] || [];
+        return {
+          ...prev,
+          [convId]: [
+            ...current,
+            { id: makeId(), role: 'assistant', content: phrase, createdAt: Date.now() },
+          ],
+        };
+      });
+      return null;
+    } finally {
+      abortRef.current = null;
+    }
+  }, [provider]);
+
+  const send = useCallback(async (text) => {
+    const userText = (text || '').trim();
+    if (!userText) return;
+
+    let convId = activeId;
+    if (!convId) {
+      convId = newConversation(userText);
+    } else {
+      setConversations((c) => c.map((x) => (x.id === convId ? { ...x, title: titleFrom(userText) } : x)));
+    }
+
+    setByConv((prev) => {
+      const current = prev[convId] || [];
+      return {
+        ...prev,
+        [convId]: [
+          ...current,
+          { id: makeId(), role: 'user', content: userText, createdAt: Date.now() },
+        ],
+      };
+    });
+
+    const transcript = buildTranscript([
+      { role: 'system', content: SOUL_SYSTEM },
+      ...(byConv[convId] || []),
+      { role: 'user', content: userText },
+    ]);
+
+    await runStream(convId, transcript);
+  }, [activeId, byConv, newConversation, runStream]);
+
   return {
-    conversations, activeId, messages, stream, canvas, memory, booting,
+    conversations, activeId, messages, stream, health,
     newConversation, openConversation, deleteConversation,
-    send, retry, editUser, stop, openArtifact, closeCanvas, editArtifact,
-    openMemory, closeMemory, forgetReflection,
+    send, stop,
   };
+}
+
+function buildTranscript(messages) {
+  return messages.map((m) => ({ role: m.role, content: m.content }));
 }

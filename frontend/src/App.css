@@ -20,12 +20,11 @@
 /* ---------------------------------------------------------------- shell */
 .gaia-shell {
   display: grid;
-  grid-template-columns: 264px 1fr 0fr;
+  grid-template-columns: 264px 1fr;
   height: 100vh;
   background: var(--bg);
   overflow: hidden;
 }
-.canvas-slot { overflow: hidden; height: 100vh; }
 
 /* ---------------------------------------------------------------- sidebar */
 .sidebar {
@@ -48,22 +47,22 @@
   display: flex; align-items: center; gap: 9px;
   width: 100%; padding: 11px 14px; margin-bottom: 20px;
   background: transparent; color: var(--text-muted);
-  border: 1px solid var(--border-strong); border-radius: 12px;
-  font-family: var(--sans); font-size: 0.9rem; cursor: pointer;
-  transition: background-color 0.25s ease, color 0.25s ease, border-color 0.25s ease;
+  border: 1px solid var(--border); border-radius: 11px;
+  font-family: var(--serif); font-size: 0.9rem; font-style: italic; cursor: pointer;
+  transition: color 0.25s ease, border-color 0.25s ease, background-color 0.25s ease;
 }
-.new-thread-btn:hover { background: var(--surface-2); color: var(--text); border-color: var(--accent-line); }
+.new-thread-btn:hover { color: var(--accent); border-color: var(--accent-line); background: var(--surface-2); }
 
-.thread-list { flex: 1; overflow-y: auto; display: flex; flex-direction: column; gap: 2px; }
+.thread-list { display: flex; flex-direction: column; gap: 2px; overflow-y: auto; flex: 1; }
 .thread-item {
-  display: flex; align-items: center; justify-content: space-between; gap: 8px;
+  display: flex; align-items: center; gap: 6px;
   padding: 10px 12px; border-radius: 10px; cursor: pointer;
   color: var(--text-muted); font-size: 0.88rem;
   transition: background-color 0.2s ease, color 0.2s ease;
 }
 .thread-item:hover { background: var(--surface-2); color: var(--text); }
 .thread-item.active { background: var(--surface-3); color: var(--text); }
-.thread-title { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.thread-title { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; flex: 1; }
 .thread-delete {
   opacity: 0; background: none; border: none; color: var(--text-faint);
   cursor: pointer; padding: 2px; display: flex; transition: opacity 0.2s ease, color 0.2s ease;
@@ -73,71 +72,6 @@
 
 .sidebar-foot { padding: 18px 8px 2px; display: flex; flex-direction: column; gap: 2px; }
 .foot-line { font-family: var(--serif); font-size: 0.78rem; color: var(--text-faint); font-style: italic; }
-
-.memory-entry {
-  display: flex; align-items: center; gap: 9px; width: 100%;
-  padding: 11px 12px; margin-top: 8px; background: transparent;
-  border: 1px solid var(--border); border-radius: 11px; color: var(--text-muted);
-  font-family: var(--serif); font-size: 0.88rem; font-style: italic; cursor: pointer;
-  transition: color 0.25s ease, border-color 0.25s ease, background-color 0.25s ease;
-}
-.memory-entry:hover { color: var(--accent); border-color: var(--accent-line); background: var(--surface-2); }
-.memory-entry svg { color: var(--accent); }
-
-/* ---------------------------------------------------------------- memory drawer */
-.memory-overlay { position: fixed; inset: 0; z-index: 40; }
-.memory-scrim { position: absolute; inset: 0; background: rgba(10, 8, 5, 0.5); backdrop-filter: blur(2px); }
-.memory-drawer {
-  position: absolute; right: 0; top: 0; height: 100vh; width: 440px;
-  background: var(--surface); border-left: 1px solid var(--border-strong);
-  display: flex; flex-direction: column; box-shadow: -30px 0 60px rgba(0,0,0,0.35);
-}
-.memory-header {
-  display: flex; align-items: flex-start; justify-content: space-between; gap: 16px;
-  padding: 28px 26px 20px; border-bottom: 1px solid var(--border);
-}
-.memory-title { font-family: var(--serif); font-size: 1.5rem; font-weight: 500; margin: 0 0 8px; }
-.memory-lede { color: var(--text-muted); font-size: 0.9rem; line-height: 1.6; margin: 0; max-width: 320px; }
-.memory-body { flex: 1; overflow-y: auto; padding: 22px 26px 40px; }
-.memory-status { color: var(--text-faint); font-family: var(--serif); font-style: italic; }
-.memory-empty {
-  color: var(--text-muted); font-family: var(--serif); font-style: italic;
-  font-size: 1.02rem; line-height: 1.7; margin-top: 30px; text-align: left;
-}
-.memory-group { margin-bottom: 30px; }
-.memory-group-title {
-  font-family: var(--sans); font-size: 0.72rem; letter-spacing: 0.09em; text-transform: uppercase;
-  color: var(--accent); margin: 0 0 14px; opacity: 0.85;
-}
-.reflection { display: flex; gap: 12px; padding: 12px 0; border-bottom: 1px solid var(--border); }
-.reflection:last-child { border-bottom: none; }
-.reflection-dot {
-  width: 8px; height: 8px; border-radius: 50%; margin-top: 8px; flex-shrink: 0;
-  background: radial-gradient(circle at 35% 30%, #F0D19B, var(--accent));
-  box-shadow: 0 0 8px rgba(203, 163, 106, 0.5);
-}
-.reflection-body { flex: 1; min-width: 0; }
-.reflection-summary { font-family: var(--serif); font-size: 1rem; line-height: 1.6; color: #F0EBE0; margin: 0 0 6px; }
-.reflection-meta { display: flex; align-items: center; justify-content: space-between; gap: 12px; }
-.reflection-time { color: var(--text-faint); font-size: 0.76rem; }
-.reflection-forget {
-  background: none; border: none; color: var(--text-faint); cursor: pointer;
-  font-family: var(--sans); font-size: 0.76rem; padding: 3px 6px; border-radius: 7px;
-  transition: color 0.2s ease, background-color 0.2s ease;
-}
-.reflection-forget:hover { color: #C98B7A; background: var(--surface-2); }
-
-/* canvas edit */
-.canvas-edit-input {
-  width: 100%; height: 100%; min-height: 400px; box-sizing: border-box;
-  background: #14110C; border: none; outline: none; resize: none;
-  color: var(--text); font-family: var(--mono); font-size: 0.85rem; line-height: 1.65;
-  padding: 20px 22px;
-}
-.canvas-foot {
-  display: flex; justify-content: flex-end; gap: 8px;
-  padding: 14px 22px; border-top: 1px solid var(--border);
-}
 
 /* ---------------------------------------------------------------- main / conversation */
 .gaia-main { height: 100vh; overflow: hidden; }
@@ -194,36 +128,17 @@
 }
 .msg-action:hover { color: var(--text); background: var(--surface-2); }
 
-/* edit mode */
-.msg-edit { width: 100%; max-width: 78%; }
-.msg-edit-input {
-  width: 100%; background: var(--surface-2); border: 1px solid var(--accent-line);
-  border-radius: 14px; color: var(--text); padding: 12px 14px; font-family: var(--sans);
-  font-size: 0.96rem; line-height: 1.6; resize: vertical; min-height: 70px; outline: none;
-}
-.msg-edit-actions { display: flex; gap: 8px; justify-content: flex-end; margin-top: 8px; }
-.ghost-btn, .accent-btn {
-  display: flex; align-items: center; gap: 6px; padding: 7px 13px; border-radius: 9px;
-  font-family: var(--sans); font-size: 0.82rem; cursor: pointer; border: 1px solid var(--border-strong);
-  transition: all 0.2s ease;
-}
-.ghost-btn { background: transparent; color: var(--text-muted); }
-.ghost-btn:hover { color: var(--text); background: var(--surface-2); }
-.accent-btn { background: var(--accent); color: #221D15; border-color: var(--accent); font-weight: 500; }
-.accent-btn:hover { background: #D9B27A; }
-
-/* attachments */
-.msg-attachments { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 10px; }
-.msg-image { max-width: 260px; max-height: 220px; border-radius: 12px; border: 1px solid var(--border); }
-.msg-file {
-  display: inline-flex; align-items: center; gap: 6px; padding: 7px 11px;
-  background: var(--surface-2); border: 1px solid var(--border); border-radius: 10px;
-  font-size: 0.82rem; color: var(--text-muted); font-family: var(--sans);
-}
-
 /* thinking indicator */
 .thinking-row { display: flex; align-items: center; gap: 12px; padding: 12px 0; }
 .thinking-word { font-family: var(--serif); font-style: italic; color: var(--text-faint); font-size: 0.95rem; }
+
+/* health whisper — a quiet line, not a banner */
+.health-whisper {
+  display: flex; align-items: center; gap: 12px; justify-content: center;
+  max-width: 760px; margin: 0 auto; padding: 10px 40px 0;
+  color: var(--text-faint); font-family: var(--serif); font-style: italic;
+  font-size: 0.88rem; line-height: 1.5;
+}
 
 /* ---------------------------------------------------------------- code */
 .code-block { margin: 6px 0 16px; border: 1px solid var(--border); border-radius: 12px; overflow: hidden; background: #14110C; }
@@ -247,38 +162,6 @@
 .msg-body th, .msg-body td { border: 1px solid var(--border-strong); padding: 8px 12px; text-align: left; }
 .msg-body th { background: var(--surface-2); }
 
-/* ---------------------------------------------------------------- tool cards */
-.tool-stack { display: flex; flex-direction: column; gap: 6px; margin-bottom: 14px; }
-.tool-card {
-  display: inline-flex; align-items: center; gap: 10px; align-self: flex-start;
-  padding: 8px 13px; background: var(--surface-2); border: 1px solid var(--border);
-  border-radius: 10px; font-family: var(--sans); font-size: 0.84rem; color: var(--text-muted);
-}
-.tool-icon { display: flex; color: var(--accent); }
-.tool-name { color: var(--text); }
-.tool-status { display: flex; color: var(--accent); }
-.tool-result { font-family: var(--mono); color: var(--text); background: var(--surface-3); padding: 2px 8px; border-radius: 6px; font-size: 0.8rem; }
-.spin { animation: spin 1s linear infinite; }
-@keyframes spin { to { transform: rotate(360deg); } }
-
-/* ---------------------------------------------------------------- artifact card */
-.artifact-card {
-  display: flex; align-items: center; gap: 13px; width: 100%; text-align: left;
-  padding: 14px 16px; margin: 8px 0 16px; background: var(--surface-2);
-  border: 1px solid var(--border-strong); border-radius: 14px; cursor: pointer;
-  font-family: var(--sans); transition: border-color 0.25s ease, background-color 0.25s ease, transform 0.25s ease;
-}
-.artifact-card:hover { border-color: var(--accent-line); background: var(--surface-3); transform: translateY(-1px); }
-.artifact-card.active { border-color: var(--accent-line); background: var(--surface-3); }
-.artifact-card-icon {
-  display: flex; align-items: center; justify-content: center; width: 40px; height: 40px;
-  border-radius: 10px; background: var(--accent-soft); color: var(--accent); flex-shrink: 0;
-}
-.artifact-card-meta { display: flex; flex-direction: column; gap: 2px; flex: 1; min-width: 0; }
-.artifact-card-title { color: var(--text); font-size: 0.94rem; font-weight: 500; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-.artifact-card-sub { color: var(--text-faint); font-size: 0.78rem; text-transform: capitalize; }
-.artifact-card-open { color: var(--accent); font-size: 0.8rem; flex-shrink: 0; }
-
 /* ---------------------------------------------------------------- composer */
 .composer-dock {
   border-top: 1px solid var(--border);
@@ -287,27 +170,12 @@
 }
 .dock-presence { display: flex; justify-content: center; padding: 0 0 12px; }
 .composer-wrap { width: 100%; }
-.composer-chips { display: flex; flex-wrap: wrap; gap: 8px; margin-bottom: 10px; }
-.attach-chip {
-  display: inline-flex; align-items: center; gap: 7px; padding: 6px 10px;
-  background: var(--surface-2); border: 1px solid var(--border); border-radius: 9px;
-  font-size: 0.8rem; color: var(--text-muted);
-}
-.attach-chip button { background: none; border: none; color: var(--text-faint); cursor: pointer; display: flex; padding: 0; }
-.attach-chip button:hover { color: #C98B7A; }
 .composer {
-  display: flex; align-items: flex-end; gap: 8px; padding: 8px 8px 8px 12px;
+  display: flex; align-items: flex-end; gap: 8px; padding: 8px 8px 8px 16px;
   background: var(--surface-2); border: 1px solid var(--border-strong); border-radius: 20px;
   transition: border-color 0.25s ease, box-shadow 0.25s ease;
 }
 .composer:focus-within { border-color: var(--accent-line); box-shadow: 0 0 0 3px rgba(203, 163, 106, 0.07); }
-.composer-attach {
-  display: flex; align-items: center; justify-content: center; width: 38px; height: 38px;
-  background: none; border: none; color: var(--text-faint); cursor: pointer; border-radius: 12px;
-  transition: color 0.2s ease, background-color 0.2s ease; flex-shrink: 0;
-}
-.composer-attach:hover:not(:disabled) { color: var(--accent); background: var(--surface-3); }
-.composer-attach:disabled { opacity: 0.4; cursor: default; }
 .composer-input {
   flex: 1; background: none; border: none; outline: none; resize: none;
   color: var(--text); font-family: var(--sans); font-size: 1rem; line-height: 1.6;
@@ -345,37 +213,9 @@
 }
 .presence-label { font-family: var(--serif); font-style: italic; color: var(--text-faint); font-size: 0.88rem; }
 
-/* ---------------------------------------------------------------- artifact canvas */
-.canvas {
-  width: 460px; height: 100vh; display: flex; flex-direction: column;
-  background: var(--surface); border-left: 1px solid var(--border);
-}
-.canvas-header {
-  display: flex; align-items: center; justify-content: space-between;
-  padding: 20px 22px; border-bottom: 1px solid var(--border);
-}
-.canvas-title-group { display: flex; flex-direction: column; gap: 3px; min-width: 0; }
-.canvas-kind { font-family: var(--mono); font-size: 0.7rem; color: var(--text-faint); text-transform: uppercase; letter-spacing: 0.06em; }
-.canvas-title { font-family: var(--serif); font-size: 1.18rem; font-weight: 500; margin: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-.canvas-actions { display: flex; gap: 6px; }
-.canvas-btn {
-  display: flex; align-items: center; justify-content: center; width: 34px; height: 34px;
-  background: none; border: 1px solid var(--border); border-radius: 9px; color: var(--text-muted);
-  cursor: pointer; transition: all 0.2s ease;
-}
-.canvas-btn:hover { color: var(--text); border-color: var(--accent-line); background: var(--surface-2); }
-.canvas-body { flex: 1; overflow-y: auto; }
-.canvas-body .canvas-prose { padding: 22px 24px; font-family: var(--serif); font-size: 1rem; line-height: 1.75; color: #F0EBE0; }
-.canvas-prose p { margin: 0 0 14px; }
-.canvas-prose h1, .canvas-prose h2, .canvas-prose h3 { font-weight: 600; margin: 18px 0 10px; }
-.canvas-prose table { border-collapse: collapse; width: 100%; font-family: var(--sans); font-size: 0.9rem; }
-.canvas-prose th, .canvas-prose td { border: 1px solid var(--border-strong); padding: 8px 12px; }
-.canvas-image { width: 100%; height: auto; display: block; }
-
 /* ---------------------------------------------------------------- responsive */
 @media (max-width: 900px) {
   .gaia-shell { grid-template-columns: 0 1fr; }
   .sidebar { display: none; }
-  .canvas-slot { position: fixed; right: 0; top: 0; z-index: 30; }
   .conversation-column { padding: 0 22px; }
 }

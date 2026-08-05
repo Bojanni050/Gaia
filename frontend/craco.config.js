@@ -79,11 +79,27 @@ let webpackConfig = {
       },
     },
   },
+  jest: {
+    configure: (jestConfig) => {
+      jestConfig.moduleNameMapper = {
+        ...jestConfig.moduleNameMapper,
+        "\\.md$": "<rootDir>/src/__mocks__/mdMock.js",
+      };
+      return jestConfig;
+    },
+  },
   webpack: {
     alias: {
       '@': path.resolve(__dirname, 'src'),
     },
     configure: (webpackConfig) => {
+
+      // Allow .md files to be imported as raw text strings.
+      // Gaia loads her SOUL document (docs/soul.md) as the system prompt.
+      webpackConfig.module.rules.push({
+        test: /\.md$/i,
+        type: 'asset/source',
+      });
 
       // Add ignored patterns to reduce watched directories
         webpackConfig.watchOptions = {

@@ -1,0 +1,15 @@
+{
+  "name": "gaia-desktop",
+  "version": "0.1.0",
+  "private": true,
+  "description": "A lifelong personal intelligence. Desktop shell for the Gaia frontend.",
+  "scripts": {
+    "dev:web": "cd frontend && yarn start",
+    "dev:desktop": "tauri dev",
+    "build:web": "cd frontend && yarn build",
+    "build:desktop": "tauri build"
+  },
+  "devDependencies": {
+    "@tauri-apps/cli": "^2.0.0"
+  }
+}

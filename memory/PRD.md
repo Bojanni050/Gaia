@@ -72,8 +72,20 @@ Chronicles (knowledge), MCP (actions), Gaia Desktop (experience). Deliver 7 foun
 - Quiet Memory (real minimal Hindsight): POST /api/hindsight/reflect extracts durable understandings (domains: preferences/patterns/context/relationships) with provenance + dedup; GET list; DELETE forget. Opt-in MemoryDrawer ("What I understand"), grouped by domain, "Let go" to forget; auto-refreshes when open.
 - Testing agent iteration_2: backend 18/18 pass, frontend 100%, model-agnosticism confirmed. No bugs.
 
+## Update — 2026-08-05 (Milestone 2: Gaia Speaks)
+- Real connection to the local Hermes API. The dev-stub backend (server.py, Mongo, emergentintegrations) is removed; no mock responses remain.
+- ReasoningProvider abstraction (contracts/reasoning.js + gaia/integration/reasoning/ReasoningProvider.js) — Gaia depends on a contract, not on a provider or a model.
+- HermesProvider (gaia/integration/reasoning/HermesProvider.js) — OpenAI-compatible /v1/chat/completions with SSE streaming; URL/model/apiKey from env (REACT_APP_HERMES_URL, REACT_APP_HERMES_MODEL, REACT_APP_HERMES_API_KEY). Defaults to http://localhost:11434/v1 (Ollama-shaped) with model "llama3" — overridable.
+- SOUL moved to gaia/identity/soul.js (single source of truth for the system prompt; provider stays persona-agnostic).
+- useConversation rewritten: in-memory conversations; provider translates raw deltas into Gaia presence transitions (thinking -> speaking -> resting); typed errors mapped to Gaia-language phrases via presence/errorPhrases.js.
+- Desktop UI narrowed: threads, conversation, composer, presence, welcome. MemoryDrawer and ArtifactCanvas removed (Hindsight and artifacts are explicit later milestones).
+- Tests: HermesProvider covered for health, streaming, abort, malformed frames (gaia/integration/reasoning/__tests__/).
+- docs/evolution.md created — milestone story, architecture reasoning, trade-offs, next milestone.
+
 ## Deferred / Backlog (updated)
-- Realtime collaborative artifact editing (currently edit + save/persist; live co-editing is future).
-- Split server.py into modules (storage/tools/hermes/hindsight/artifacts) once it grows further.
-- Index reflections.summary; surface reflect model-failure vs nothing-durable.
-- Continue evolving Gaia's own language for more surfaces.
+- Conversation persistence (currently in-memory only; lost on reload) — next milestone or later.
+- Hindsight reflective memory (out of scope for M2; returns with provenance-on-demand as trust guardrail).
+- Tool calling (calculate, get_current_time) — provider must support tools; revisit when a real use appears.
+- Artifacts and the living canvas — revisit when a real delivery use case appears.
+- Real MCP integration — behind explicit intent + permission.
+- Local model alias discovery (auto-detect which models the user's Hermes serves) — nice-to-have.

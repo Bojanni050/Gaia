@@ -7,8 +7,11 @@
  *
  * The client integrates only through these contracts. No layer reaches into
  * another layer's internals.
+ *
+ * Today the desktop speaks only to the reasoning seam; the other contracts
+ * are documented as future seams to be filled in later milestones.
  */
-export * from './hermes';
+export * from './reasoning';
 export * from './hindsight';
 export * from './chronicles';
 export * from './mcp';

@@ -88,3 +88,9 @@ credentials.json
 *.key
 .credentials
 .opencode
+agents.md
+
+# Tauri (desktop shell)
+src-tauri/target/
+src-tauri/gen/schemas/
+src-tauri/WixTools/
