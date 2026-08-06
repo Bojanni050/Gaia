@@ -189,6 +189,42 @@ The next milestone introduces the first reflective layer: Hindsight. Gaia will b
 
 ---
 
+## Amendment — Identity: Attunement vs. Mimicry
+
+**Context.** Gaia was built and refined for a single user first. As the long-term intent to make Gaia available beyond that first relationship became explicit, a latent risk in the personality model surfaced: `personality.md` described Gaia's voice as adaptive — "her phrasing, framing, and register shift toward theirs." For one user, that reads as attentiveness. Generalized to many users, it is the exact mechanism by which Gaia would start to sound like whoever she's talking to, and lose the one thing SOUL exists to guarantee — that she is recognizably herself to everyone, always.
+
+**What changed.**
+
+- `frontend/src/gaia/identity/soul.md` — the canonical constitution, loaded as the system prompt — now explicitly instructs Gaia not to adopt a person's slang, vocabulary, or speech patterns to sound familiar. She may adjust warmth, length, and timing; never her manner of speaking.
+- `docs/personality.md` §1 — "Adaptive over time" was rewritten to "Attuned, never mirrored," making the same distinction at the architectural-description level.
+- `docs/personality.md` §10 — added an explicit "What May Adapt vs. What Never Does" list, splitting personalization into what's per-user tunable (length, timing, initiative, warmth within her own register) versus what is fixed for every user (vocabulary, values, willingness to disagree, core character).
+
+**Why this matters.**
+
+Attunement and mimicry look identical in the short term — both make an assistant feel more natural to talk to. They diverge completely over a lifetime of many relationships: attunement compounds trust because the person always knows who they're talking to; mimicry erodes identity because Gaia becomes a reflection of each user rather than a constant presence. Vision's promise — "the person and Gaia who understand each other so well" — depends on there being one Gaia to understand, not a version of her that reshapes itself around whoever is present.
+
+**The test going forward.** Understanding shows up in *what* Gaia says — relevance, timing, restraint. It must never show up in *how* she sounds. Any future personalization feature should be checked against this line before it ships.
+
+---
+
+## Amendment — Foundation Engine Was Loading the Wrong SOUL
+
+**Context.** While tracing whether the mimicry-vs-attunement fix above actually reached the model, we found that `foundation/loader.ts` resolved every foundation document — including `soul.md` — from `docs/`. That meant the artifact's `soul.md` entry, and therefore the real system prompt sent to Hermes on every turn (via `FoundationEngine.getPrompt()` in `useConversation.js`), was `docs/soul.md`: the architectural *overview* of SOUL, not the constitution.
+
+The actual constitution — the "You are Gaia…" document with her character, communication rules, and boundaries — lives at `frontend/src/gaia/identity/soul.md` and is exported as `SOUL_SYSTEM` from `identity/soul.js`. That export was never imported anywhere except its own test. It had no effect on runtime behavior.
+
+**What changed.**
+
+- `foundation/loader.ts` now resolves `soul.md` from `frontend/src/gaia/identity/soul.md` specifically, while every other foundation document continues to load from `docs/`.
+- `foundation/index.ts`'s watch mode now watches the identity directory in addition to `docs/`, so identity edits rebuild the artifact automatically during `dev:web` / `dev:desktop`.
+- `docs/soul.md` is unchanged and keeps its intended role as the human-facing architectural overview — it's just no longer mistaken for the prompt itself.
+
+**Open question.** `docs/soul.md`'s exact intended relationship to the canonical file — how much duplication between the two is intentional versus accidental drift — needs a pass to confirm against the original design intent before we treat this as fully settled.
+
+**Why this matters.** This bug meant SOUL edits — including the attunement-vs-mimicry fix directly above — silently had zero effect on what Gaia actually said, while every document and test suggested otherwise. A constitution that isn't wired to the thing it's supposed to govern is worse than no constitution: it creates false confidence that identity is locked down when it isn't.
+
+---
+
 ## How to Read This Document
 
 Each milestone records:

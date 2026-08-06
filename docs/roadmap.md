@@ -77,7 +77,7 @@ framing: "Gaia is a lifelong personal intelligence designed to grow through unde
 
 ### Must Have
 - Pattern formation in Hindsight via memory policies (how the user decides, communicates, works).
-- Personalized language: framing and register adapt to the user over time.
+- Personalized language: framing, timing, and depth adapt to the user over time — never vocabulary or manner of speaking (personality §10).
 - Full memory provenance + control: inspect, edit, and forget (architecture §8).
 - Clear separation surfaced: personal memory (Hindsight) vs. structured knowledge (Chronicles).
 

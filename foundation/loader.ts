@@ -1,15 +1,23 @@
 import fs from 'fs';
 import path from 'path';
 
+// soul.md's canonical source is the identity layer, not docs/ (docs/soul.md is
+// an architectural overview of SOUL, not the constitution itself). Every other
+// foundation document lives in docs/.
+const IDENTITY_OVERRIDES: Record<string, string> = {
+  'soul.md': path.join('frontend', 'src', 'gaia', 'identity', 'soul.md'),
+};
+
 /**
  * Reads a markdown document from disk and validates its existence.
  */
 export function loadDocument(filename: string, rootDir: string = process.cwd()): string {
-  const filePath = path.join(rootDir, 'docs', filename);
-  
+  const relativePath = IDENTITY_OVERRIDES[filename] ?? path.join('docs', filename);
+  const filePath = path.join(rootDir, relativePath);
+
   if (!fs.existsSync(filePath)) {
-    throw new Error(`Foundation Loader: Could not find document at `);
+    throw new Error(`Foundation Loader: Could not find document at ${filePath}`);
   }
-  
+
   return fs.readFileSync(filePath, 'utf-8');
 }

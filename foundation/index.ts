@@ -4,6 +4,7 @@ import { FoundationBuilder } from './builder';
 
 const ARTIFACT_PATH = path.join(process.cwd(), 'frontend', 'src', 'gaia', 'foundation', 'artifact.json');
 const DOCS_DIR = path.join(process.cwd(), 'docs');
+const IDENTITY_DIR = path.join(process.cwd(), 'frontend', 'src', 'gaia', 'identity');
 
 function buildArtifact() {
   console.log('Foundation Engine: Building foundation artifact...');
@@ -33,19 +34,29 @@ const isWatchMode = args.includes('--watch');
 buildArtifact();
 
 if (isWatchMode) {
-  console.log(`Foundation Engine: Watching for changes in ${DOCS_DIR}...`);
-  
+  console.log(`Foundation Engine: Watching for changes in ${DOCS_DIR} and ${IDENTITY_DIR}...`);
+
   let debounceTimeout: NodeJS.Timeout | null = null;
-  
+
+  const scheduleRebuild = (filename: string) => {
+    if (debounceTimeout) {
+      clearTimeout(debounceTimeout);
+    }
+    debounceTimeout = setTimeout(() => {
+      console.log(`Foundation Engine: Detected change in ${filename}, rebuilding...`);
+      buildArtifact();
+    }, 100);
+  };
+
   fs.watch(DOCS_DIR, (eventType, filename) => {
     if (filename && filename.endsWith('.md')) {
-      if (debounceTimeout) {
-        clearTimeout(debounceTimeout);
-      }
-      debounceTimeout = setTimeout(() => {
-        console.log(`Foundation Engine: Detected change in ${filename}, rebuilding...`);
-        buildArtifact();
-      }, 100);
+      scheduleRebuild(filename);
+    }
+  });
+
+  fs.watch(IDENTITY_DIR, (eventType, filename) => {
+    if (filename && filename.endsWith('.md')) {
+      scheduleRebuild(filename);
     }
   });
 }
