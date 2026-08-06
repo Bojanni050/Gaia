@@ -136,6 +136,26 @@ describe('HermesProvider', () => {
       expect(onDelta).toHaveBeenNthCalledWith(2, ', world');
     });
 
+    test('assembles reasoning content from SSE deltas and passes to onDelta with isReasoning = true', async () => {
+      const sse = [
+        'data: {"choices":[{"delta":{"reasoning_content":"Thinking"}}]}\n\n',
+        'data: {"choices":[{"delta":{"reasoning_content":" about math"}}]}\n\n',
+        'data: {"choices":[{"delta":{"content":"Result is 4"}}]}\n\n',
+        'data: [DONE]\n\n',
+      ].join('');
+      global.fetch = jest.fn(async () => makeSseResponse([sse]));
+      const p = new HermesProvider({ baseUrl: 'http://h:9000/v1', model: 'm' });
+
+      const onDelta = jest.fn();
+      const full = await p.stream([{ role: 'user', content: 'hi' }], { onDelta });
+
+      expect(full).toBe('Result is 4');
+      expect(onDelta).toHaveBeenCalledTimes(3);
+      expect(onDelta).toHaveBeenNthCalledWith(1, 'Thinking', true);
+      expect(onDelta).toHaveBeenNthCalledWith(2, ' about math', true);
+      expect(onDelta).toHaveBeenNthCalledWith(3, 'Result is 4');
+    });
+
     test('ignores malformed SSE frames without throwing', async () => {
       const sse = [
         'data: {"choices":[{"delta":{"content":"A"}}]}\n\n',

@@ -111,8 +111,15 @@ export class HermesProvider extends ReasoningProvider {
           buffer = buffer.slice(sep + 2);
           const delta = parseSseFrame(frame);
           if (delta) {
-            fullText += delta;
-            if (onDelta) onDelta(delta);
+            const hasContent = typeof delta.content === 'string' && delta.content.length > 0;
+            const hasReasoning = typeof delta.reasoning === 'string' && delta.reasoning.length > 0;
+            if (hasContent) {
+              fullText += delta.content;
+              if (onDelta) onDelta(delta.content);
+            }
+            if (hasReasoning) {
+              if (onDelta) onDelta(delta.reasoning, true);
+            }
           }
         }
       }
@@ -136,8 +143,13 @@ function parseSseFrame(frame) {
     if (!payload || payload === '[DONE]') return null;
     try {
       const obj = JSON.parse(payload);
-      const content = obj?.choices?.[0]?.delta?.content;
-      if (typeof content === 'string' && content.length > 0) return content;
+      const delta = obj?.choices?.[0]?.delta;
+      if (delta) {
+        return {
+          content: delta.content || '',
+          reasoning: delta.reasoning_content || '',
+        };
+      }
     } catch (_) { /* malformed frame, skip */ }
   }
   return null;

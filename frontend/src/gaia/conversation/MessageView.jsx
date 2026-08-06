@@ -41,10 +41,33 @@ function Attachments({ items }) {
   );
 }
 
-function AssistantBody({ content, streaming }) {
-  const segments = parseSegments(content);
+function AssistantBody({ content, reasoning, streaming }) {
+  let cleanContent = content;
+  let displayReasoning = reasoning;
+
+  if (!displayReasoning && content && content.includes('<think>')) {
+    const thinkStart = content.indexOf('<think>');
+    const thinkEnd = content.indexOf('</think>');
+    if (thinkEnd === -1) {
+      displayReasoning = content.slice(thinkStart + 7);
+      cleanContent = content.slice(0, thinkStart);
+    } else {
+      displayReasoning = content.slice(thinkStart + 7, thinkEnd);
+      cleanContent = content.slice(0, thinkStart) + content.slice(thinkEnd + 8);
+    }
+  }
+
+  const segments = parseSegments(cleanContent);
   return (
     <>
+      {displayReasoning && (
+        <details className="thought-process" open={streaming} data-testid="thought-process">
+          <summary className="thought-process-title">{L.thoughtProcess}</summary>
+          <div className="thought-process-body">
+            <Markdown>{displayReasoning}</Markdown>
+          </div>
+        </details>
+      )}
       {segments.map((seg, i) => {
         const isLast = i === segments.length - 1;
         const val = seg.kind === 'text' ? seg.value : (seg.value || '');
@@ -115,7 +138,7 @@ export default function MessageView({ message, streaming, onEdit, onDelete, onRe
               <p className="user-text" data-testid="user-text">{message.content}</p>
             )
           ) : (
-            <AssistantBody content={message.content} streaming={streaming} />
+            <AssistantBody content={message.content} reasoning={message.reasoning} streaming={streaming} />
           )}
           <Attachments items={message.attachments} />
         </div>

@@ -3,7 +3,7 @@ import { getReasoningProvider } from '../integration/reasoning';
 import { SOUL_SYSTEM } from '../identity/soul';
 import { phraseReasoningError } from '../presence/errorPhrases';
 
-const emptyStream = { active: false, messageId: null, content: '', presence: 'quiet' };
+const emptyStream = { active: false, messageId: null, content: '', reasoning: '', presence: 'quiet' };
 const PRESENCE_THINKING = 'thinking';
 const PRESENCE_SPEAKING = 'speaking';
 
@@ -76,19 +76,29 @@ export function useConversation() {
     abortRef.current = controller;
 
     const assistantId = makeId();
-    setStream({ active: true, messageId: assistantId, content: '', presence: PRESENCE_THINKING });
+    setStream({ active: true, messageId: assistantId, content: '', reasoning: '', presence: PRESENCE_THINKING });
 
     let fullText = '';
+    let fullReasoning = '';
     try {
       await provider.stream(transcript, {
         signal: controller.signal,
-        onDelta: (chunk) => {
-          fullText += chunk;
-          setStream((s) => (
-            s.presence === PRESENCE_SPEAKING
-              ? { ...s, content: s.content + chunk }
-              : { ...s, presence: PRESENCE_SPEAKING, content: s.content + chunk }
-          ));
+        onDelta: (chunk, isReasoning) => {
+          if (isReasoning) {
+            fullReasoning += chunk;
+            setStream((s) => ({
+              ...s,
+              presence: PRESENCE_THINKING,
+              reasoning: (s.reasoning || '') + chunk
+            }));
+          } else {
+            fullText += chunk;
+            setStream((s) => ({
+              ...s,
+              presence: PRESENCE_SPEAKING,
+              content: s.content + chunk
+            }));
+          }
         },
       });
 
@@ -103,7 +113,7 @@ export function useConversation() {
           ...prev,
           [convId]: [
             ...current,
-            { id: assistantId, role: 'assistant', content: fullText, createdAt: Date.now() },
+            { id: assistantId, role: 'assistant', content: fullText, reasoning: fullReasoning, createdAt: Date.now() },
           ],
         };
       });

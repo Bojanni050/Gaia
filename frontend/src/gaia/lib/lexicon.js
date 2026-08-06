@@ -28,6 +28,7 @@ export const LANGUAGES = {
     cancel: 'Annuleren',
     saveRegenerate: 'Opslaan & Heroverwegen',
     retry: 'Opnieuw proberen',
+    thoughtProcess: 'Gedachtegang',
     
     // Sidebar footer
     footLine1: 'Een levenslange persoonlijke intelligentie,',
@@ -63,6 +64,7 @@ export const LANGUAGES = {
     cancel: 'Cancel',
     saveRegenerate: 'Save & Reconsider',
     retry: 'Retry',
+    thoughtProcess: 'Thought process',
 
     // Sidebar footer
     footLine1: 'A lifelong personal intelligence,',
