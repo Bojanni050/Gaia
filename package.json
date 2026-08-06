@@ -4,12 +4,17 @@
   "private": true,
   "description": "A lifelong personal intelligence. Desktop shell for the Gaia frontend.",
   "scripts": {
-    "dev:web": "cd frontend && yarn start",
-    "dev:desktop": "tauri dev",
-    "build:web": "cd frontend && yarn build",
-    "build:desktop": "tauri build"
+    "dev:foundation": "tsx foundation/index.ts --watch",
+    "build:foundation": "tsx foundation/index.ts",
+    "dev:web": "concurrently \"npm run dev:foundation\" \"cd frontend && yarn start\"",
+    "dev:desktop": "concurrently \"npm run dev:foundation\" \"tauri dev\"",
+    "build:web": "npm run build:foundation && cd frontend && yarn build",
+    "build:desktop": "npm run build:foundation && tauri build"
   },
   "devDependencies": {
-    "@tauri-apps/cli": "^2.0.0"
+    "@tauri-apps/cli": "^2.0.0",
+    "@types/node": "^26.1.2",
+    "concurrently": "^10.0.4",
+    "tsx": "^4.23.9"
   }
 }

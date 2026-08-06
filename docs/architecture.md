@@ -149,7 +149,7 @@ Gaia Desktop **does not**: perform reasoning, decide what to remember, hold the 
 
 ### 4.1 SOUL — Identity
 - **Owns:** Gaia's constitution — who she is, her values, tone, boundaries, and continuity rules.
-- **Provides:** A stable identity contract that governs all of Gaia's expression, independent of any provider.
+- **Provides:** A stable identity contract that governs all of Gaia's expression, independent of any provider. The Foundation Engine compiles this identity at build-time from canonical Markdown files (`soul.md`, `principles.md`, `lexicon.md`).
 - **Never:** Stores episodic memory, performs reasoning, or executes actions.
 - **Boundary rule:** Identity is read as a governing constraint by Hermes; it is not something a model generates or can overwrite.
 

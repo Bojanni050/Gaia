@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { getReasoningProvider } from '../integration/reasoning';
-import { SOUL_SYSTEM } from '../identity/soul';
+import { FoundationEngine } from '../foundation';
 import { phraseReasoningError } from '../presence/errorPhrases';
 
 const emptyStream = { active: false, messageId: null, content: '', reasoning: '', presence: 'quiet' };
@@ -167,7 +167,7 @@ export function useConversation() {
 
     const currentConvMessages = byConv[convId] || [];
     const transcript = buildTranscript([
-      { role: 'system', content: SOUL_SYSTEM },
+      { role: 'system', content: FoundationEngine.getPrompt() },
       ...currentConvMessages,
       newMsg,
     ]);
@@ -195,7 +195,7 @@ export function useConversation() {
     }));
 
     const transcript = buildTranscript([
-      { role: 'system', content: SOUL_SYSTEM },
+      { role: 'system', content: FoundationEngine.getPrompt() },
       ...truncated,
     ]);
 
@@ -227,7 +227,7 @@ export function useConversation() {
     }));
 
     const transcript = buildTranscript([
-      { role: 'system', content: SOUL_SYSTEM },
+      { role: 'system', content: FoundationEngine.getPrompt() },
       ...truncated,
     ]);
 
@@ -248,7 +248,7 @@ export function useConversation() {
     }));
 
     const transcript = buildTranscript([
-      { role: 'system', content: SOUL_SYSTEM },
+      { role: 'system', content: FoundationEngine.getPrompt() },
       ...truncated,
     ]);
 
