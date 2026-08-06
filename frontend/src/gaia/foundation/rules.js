@@ -1,12 +1,4 @@
-import { ConversationContext } from './context';
-
-export interface SelectionRule {
-  name: string;
-  condition: (context: ConversationContext) => boolean;
-  documents: string[];
-}
-
-export const rules: SelectionRule[] = [
+export const rules = [
   {
     name: 'Technical',
     condition: (context) => context.type === 'technical',

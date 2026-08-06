@@ -1,4 +1,3 @@
-import { ConversationContext } from './context';
 import { rules } from './rules';
 
 export class FoundationSelector {
@@ -6,7 +5,7 @@ export class FoundationSelector {
    * Evaluates the configured rules against the given context and 
    * returns the required foundation documents.
    */
-  public static select(context: ConversationContext): string[] {
+  static select(context) {
     for (const rule of rules) {
       if (rule.condition(context)) {
         return rule.documents;

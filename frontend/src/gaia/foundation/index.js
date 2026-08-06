@@ -1,5 +1,4 @@
 import artifact from './artifact.json';
-import { ConversationContext } from './context';
 import { FoundationSelector } from './selector';
 
 /**
@@ -11,7 +10,7 @@ export class FoundationEngine {
   /**
    * Retrieves the full system prompt built from the dynamically selected foundation documents.
    */
-  public static getPrompt(context: ConversationContext): string {
+  static getPrompt(context) {
     const selectedFiles = FoundationSelector.select(context);
     const availableFiles = Object.keys(artifact.documents || {});
     
@@ -28,7 +27,7 @@ export class FoundationEngine {
     );
 
     return selectedFiles
-      .map(filename => (artifact.documents as Record<string, string>)[filename])
+      .map(filename => artifact.documents[filename])
       .filter(content => content !== undefined)
       .join('\n\n---\n\n');
   }
