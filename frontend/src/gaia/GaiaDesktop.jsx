@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { motion } from 'framer-motion';
 import Threads from './sidebar/Threads';
 import Conversation from './conversation/Conversation';
@@ -6,6 +6,12 @@ import { useConversation } from './state/useConversation';
 
 export default function GaiaDesktop() {
   const g = useConversation();
+  const [lang, setLang] = useState(localStorage.getItem('gaia.lang') || 'nl');
+
+  const handleLangChange = (newLang) => {
+    localStorage.setItem('gaia.lang', newLang);
+    setLang(newLang);
+  };
 
   return (
     <motion.div
@@ -21,10 +27,13 @@ export default function GaiaDesktop() {
         onSelect={g.openConversation}
         onNew={() => g.newConversation('')}
         onDelete={g.deleteConversation}
+        lang={lang}
+        onLangChange={handleLangChange}
       />
 
       <main className="gaia-main">
         <Conversation
+          key={lang}
           messages={g.messages}
           stream={g.stream}
           health={g.health}

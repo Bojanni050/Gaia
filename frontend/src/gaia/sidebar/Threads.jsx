@@ -2,7 +2,15 @@ import React from 'react';
 import { Plus, Trash2 } from 'lucide-react';
 import { L } from '../lib/lexicon';
 
-export default function Threads({ conversations, activeId, onSelect, onNew, onDelete }) {
+export default function Threads({ 
+  conversations, 
+  activeId, 
+  onSelect, 
+  onNew, 
+  onDelete, 
+  lang = 'nl', 
+  onLangChange 
+}) {
   return (
     <nav className="sidebar" data-testid="sidebar">
       <div className="brand">
@@ -36,8 +44,25 @@ export default function Threads({ conversations, activeId, onSelect, onNew, onDe
       </div>
 
       <div className="sidebar-foot">
-        <span className="foot-line">A lifelong personal intelligence,</span>
-        <span className="foot-line">growing through understanding.</span>
+        <div className="lang-switcher" data-testid="lang-switcher">
+          <button 
+            className={`lang-btn ${lang === 'nl' ? 'active' : ''}`}
+            onClick={() => onLangChange('nl')}
+            data-testid="lang-btn-nl"
+          >
+            NL
+          </button>
+          <span className="lang-separator">/</span>
+          <button 
+            className={`lang-btn ${lang === 'en' ? 'active' : ''}`}
+            onClick={() => onLangChange('en')}
+            data-testid="lang-btn-en"
+          >
+            EN
+          </button>
+        </div>
+        <span className="foot-line">{L.footLine1}</span>
+        <span className="foot-line">{L.footLine2}</span>
       </div>
     </nav>
   );

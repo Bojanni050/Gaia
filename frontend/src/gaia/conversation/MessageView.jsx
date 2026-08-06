@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import { Copy, Check, Edit3, Trash2, RotateCw, File, Image } from 'lucide-react';
 import Markdown from './Markdown';
 import { parseSegments } from '../lib/artifactParser';
+import { L } from '../lib/lexicon';
 
 function Attachments({ items }) {
   if (!items || !items.length) return null;
@@ -103,10 +104,10 @@ export default function MessageView({ message, streaming, onEdit, onDelete, onRe
                 />
                 <div className="edit-actions">
                   <button className="edit-btn cancel" onClick={handleCancelEdit} data-testid="edit-cancel-btn">
-                    Cancel
+                    {L.cancel}
                   </button>
                   <button className="edit-btn save" onClick={handleSaveEdit} data-testid="edit-save-btn">
-                    Save & Regenerate
+                    {L.saveRegenerate}
                   </button>
                 </div>
               </div>
@@ -140,7 +141,7 @@ export default function MessageView({ message, streaming, onEdit, onDelete, onRe
                 {message.error ? (
                   <button className="msg-action" onClick={() => onRetry(message.id)} data-testid="message-retry-btn" aria-label="Retry">
                     <RotateCw size={13} />
-                    <span>Retry</span>
+                    <span>{L.retry}</span>
                   </button>
                 ) : (
                   <button className="msg-action" onClick={() => onRegenerate(message.id)} data-testid="message-regenerate-btn" aria-label="Regenerate">

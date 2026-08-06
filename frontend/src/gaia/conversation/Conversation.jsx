@@ -4,8 +4,7 @@ import MessageView from './MessageView';
 import Composer from './Composer';
 import Presence from '../presence/Presence';
 import { getGreeting } from '../lib/greeting';
-
-const PRESENCE_WORD = { thinking: 'thinking', speaking: 'speaking', listening: 'listening', quiet: '' };
+import { L } from '../lib/lexicon';
 
 export default function Conversation({
   messages,
@@ -112,7 +111,7 @@ export default function Conversation({
               {stream.active && !stream.content && (
                 <div className="thinking-row" data-testid="thinking-indicator">
                   <Presence state={stream.presence} size={26} />
-                  <span className="thinking-word">{PRESENCE_WORD[stream.presence] || 'thinking'}</span>
+                  <span className="thinking-word">{L[stream.presence] || L.thinking}</span>
                 </div>
               )}
             </>
@@ -123,7 +122,7 @@ export default function Conversation({
       {health && health.status === 'unreachable' && (
         <div className="health-whisper" data-testid="health-whisper" role="status">
           <Presence state="quiet" size={18} />
-          <span>I can&apos;t reach my reason engine right now. Take your time — I&apos;m here when you&apos;re ready to try again.</span>
+          <span>{L.healthWhisper}</span>
         </div>
       )}
 

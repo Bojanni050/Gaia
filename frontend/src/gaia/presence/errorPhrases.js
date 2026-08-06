@@ -8,12 +8,21 @@
 import { ReasoningUnavailableError, ReasoningAbortedError } from '../integration/reasoning/errors';
 
 const QUIET_PHRASES = {
-  unavailable: "I couldn't reach my reason engine. Take your time — I'm here when you're ready to try again.",
-  aborted: 'Stopped.',
+  nl: {
+    unavailable: "Ik kan mijn denkmotor momenteel niet bereiken. Neem je tijd — ik ben er als je klaar bent om het opnieuw te proberen.",
+    aborted: 'Gestopt.',
+  },
+  en: {
+    unavailable: "I couldn't reach my reason engine. Take your time — I'm here when you're ready to try again.",
+    aborted: 'Stopped.',
+  }
 };
 
 export function phraseReasoningError(err) {
-  if (err instanceof ReasoningAbortedError) return QUIET_PHRASES.aborted;
-  if (err instanceof ReasoningUnavailableError) return QUIET_PHRASES.unavailable;
-  return QUIET_PHRASES.unavailable;
+  const currentLang = localStorage.getItem('gaia.lang') || 'nl';
+  const phrases = QUIET_PHRASES[currentLang] || QUIET_PHRASES.nl;
+
+  if (err instanceof ReasoningAbortedError) return phrases.aborted;
+  if (err instanceof ReasoningUnavailableError) return phrases.unavailable;
+  return phrases.unavailable;
 }

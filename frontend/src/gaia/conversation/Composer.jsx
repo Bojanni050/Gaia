@@ -1,5 +1,6 @@
 import React, { useEffect, useRef, useState } from 'react';
 import { ArrowUp, Square, Paperclip, X, File } from 'lucide-react';
+import { L } from '../lib/lexicon';
 
 /**
  * Composer — the always-ready place to think with Gaia.
@@ -100,7 +101,7 @@ export default function Composer({ onSend, onStop, streaming, onDraftChange }) {
     >
       {dragOver && (
         <div className="drop-overlay" data-testid="drop-overlay">
-          Drop files to attach
+          {L.dropOverlay}
         </div>
       )}
 
@@ -155,7 +156,7 @@ export default function Composer({ onSend, onStop, streaming, onDraftChange }) {
         <textarea
           ref={taRef}
           className="composer-input"
-          placeholder="Say anything, or just think out loud…"
+          placeholder={L.composerPlaceholder}
           value={text}
           onChange={(e) => { setText(e.target.value); grow(e.target); }}
           onKeyDown={onKey}
@@ -180,7 +181,7 @@ export default function Composer({ onSend, onStop, streaming, onDraftChange }) {
           </button>
         )}
       </div>
-      <p className="composer-hint">Gaia keeps what matters, and stays quiet when nothing needs saying.</p>
+      <p className="composer-hint">{L.composerHint}</p>
     </div>
   );
 }

@@ -489,3 +489,35 @@
   background: var(--surface-3);
 }
 
+/* language switcher */
+.lang-switcher {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  margin-bottom: 12px;
+  font-family: var(--serif);
+  font-size: 0.76rem;
+  color: var(--text-faint);
+  padding: 0 4px;
+}
+.lang-btn {
+  background: none;
+  border: none;
+  color: var(--text-faint);
+  cursor: pointer;
+  padding: 0;
+  font-family: inherit;
+  font-size: inherit;
+  transition: color 0.2s;
+}
+.lang-btn:hover {
+  color: var(--text-muted);
+}
+.lang-btn.active {
+  color: var(--accent);
+  font-weight: 600;
+}
+.lang-separator {
+  opacity: 0.4;
+}
+

@@ -5,6 +5,13 @@ import {
 } from '../../integration/reasoning/errors';
 
 describe('phraseReasoningError', () => {
+  beforeAll(() => {
+    localStorage.setItem('gaia.lang', 'en');
+  });
+
+  afterAll(() => {
+    localStorage.removeItem('gaia.lang');
+  });
   test('returns the calm unreachable phrase', () => {
     const phrase = phraseReasoningError(new ReasoningUnavailableError());
     expect(phrase).toMatch(/reason engine/);
