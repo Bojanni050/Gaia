@@ -2,7 +2,7 @@ import React, { useEffect, useMemo, useRef, useState } from 'react';
 import { motion } from 'framer-motion';
 import MessageView from './MessageView';
 import Composer from './Composer';
-import Presence from '../presence/Presence';
+import { Presence, PresenceOrb } from '../../components/Presence';
 import { getGreeting } from '../lib/greeting';
 import { L } from '../lib/lexicon';
 
@@ -65,7 +65,7 @@ export default function Conversation({
                 animate={{ opacity: 1, scale: 1 }}
                 transition={{ duration: 1.4, ease: 'easeOut' }}
               >
-                <Presence state="quiet" size={72} />
+                <PresenceOrb state="quiet" size={72} />
               </motion.div>
               <motion.h1
                 className="welcome-title"
@@ -110,8 +110,7 @@ export default function Conversation({
               )}
               {stream.active && !stream.content && (
                 <div className="thinking-row" data-testid="thinking-indicator">
-                  <Presence state={stream.presence} size={26} />
-                  <span className="thinking-word">{L[stream.presence] || L.thinking}</span>
+                  <Presence isThinking={true} type="general" state={stream.presence} size={26} />
                 </div>
               )}
             </>
@@ -121,7 +120,7 @@ export default function Conversation({
 
       {health && health.status === 'unreachable' && (
         <div className="health-whisper" data-testid="health-whisper" role="status">
-          <Presence state="quiet" size={18} />
+          <PresenceOrb state="quiet" size={18} />
           <span>{L.healthWhisper}</span>
         </div>
       )}
@@ -129,7 +128,7 @@ export default function Conversation({
       <div className="composer-dock">
         <div className="conversation-column">
           <div className="dock-presence">
-            <Presence state={presenceState} size={22} />
+            <PresenceOrb state={presenceState} size={22} />
           </div>
           <Composer
             onSend={onSend}
