@@ -7,15 +7,43 @@ import { getGreeting } from '../lib/greeting';
 
 const PRESENCE_WORD = { thinking: 'thinking', speaking: 'speaking', listening: 'listening', quiet: '' };
 
-export default function Conversation({ messages, stream, health, onSend, onStop }) {
+export default function Conversation({
+  messages,
+  stream,
+  health,
+  onSend,
+  onStop,
+  onEdit,
+  onDelete,
+  onRegenerate,
+  onRetry
+}) {
   const scrollRef = useRef(null);
+  const isAtBottomRef = useRef(true);
+  const prevLenRef = useRef(messages.length);
+  
   const greeting = useMemo(() => getGreeting(), []);
   const [hasDraft, setHasDraft] = useState(false);
 
   useEffect(() => {
     const el = scrollRef.current;
-    if (el) el.scrollTo({ top: el.scrollHeight, behavior: 'smooth' });
+    if (!el) return;
+    
+    // Auto-scroll if a new message was added or we are locked at the bottom
+    if (messages.length > prevLenRef.current || isAtBottomRef.current) {
+      el.scrollTo({ top: el.scrollHeight, behavior: 'smooth' });
+    }
+    prevLenRef.current = messages.length;
   }, [messages, stream.content]);
+
+  const handleScroll = () => {
+    const el = scrollRef.current;
+    if (!el) return;
+    // User is considered at the bottom if within 80px of the absolute bottom
+    const threshold = 80;
+    const isAtBottom = el.scrollHeight - el.scrollTop - el.clientHeight <= threshold;
+    isAtBottomRef.current = isAtBottom;
+  };
 
   const empty = messages.length === 0 && !stream.active;
   const presenceState = stream.active
@@ -24,7 +52,12 @@ export default function Conversation({ messages, stream, health, onSend, onStop 
 
   return (
     <section className="conversation" data-testid="conversation">
-      <div className="conversation-scroll" ref={scrollRef}>
+      <div 
+        className="conversation-scroll" 
+        ref={scrollRef} 
+        onScroll={handleScroll}
+        data-testid="conversation-scroll"
+      >
         <div className="conversation-column">
           {empty ? (
             <div className="welcome" data-testid="welcome">
@@ -55,12 +88,25 @@ export default function Conversation({ messages, stream, health, onSend, onStop 
           ) : (
             <>
               {messages.map((m) => (
-                <MessageView key={m.id} message={m} streaming={false} />
+                <MessageView 
+                  key={m.id} 
+                  message={m} 
+                  streaming={false} 
+                  onEdit={onEdit}
+                  onDelete={onDelete}
+                  onRegenerate={onRegenerate}
+                  onRetry={onRetry}
+                />
               ))}
-              {stream.active && (
+              {stream.active && stream.content && (
                 <MessageView
+                  key={stream.messageId || 'streaming'}
                   message={{ id: stream.messageId || 'streaming', role: 'assistant', content: stream.content }}
                   streaming
+                  onEdit={onEdit}
+                  onDelete={onDelete}
+                  onRegenerate={onRegenerate}
+                  onRetry={onRetry}
                 />
               )}
               {stream.active && !stream.content && (

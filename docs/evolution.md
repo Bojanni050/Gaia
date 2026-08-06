@@ -163,6 +163,28 @@ The next milestone introduces the first reflective layer: Hindsight. Gaia will b
 - [Tauri CLI](https://tauri.app/start/prerequisites/) — install with `cargo install tauri-cli` or use the npm version included as a dev dependency at the repo root.
 - Run `yarn install` at the repo root, then `yarn dev:desktop` to launch the desktop window.
 
+## Milestone 4 — Complete Core Chat Experience
+
+**Goal.** Elevate Gaia's conversational interface to a production-ready, highly interactive personal chat environment. Build complete media attachment flows, advanced markdown formatting (including tables, LaTeX equations, and Mermaid diagrams), and full control over the conversational flow (message editing, deletion, response regeneration, and retrying).
+
+**What was built.**
+- **LaTeX Math support**: Integrated `remark-math` and `rehype-katex` with global KaTeX styles. In-line and display equations render natively in responses.
+- **Mermaid Diagrams**: Created a modular `<MermaidBlock>` component rendering block code with language `mermaid` into interactive SVG diagrams styled in Gaia's dark theme.
+- **Rich Input Attachments**: Added multi-file picker, image/file previews, and delete-before-sending capabilities inside `<Composer>`.
+- **Drag & Drop and Paste Integration**: Added HTML5 drop zone and clipboard paste listeners. Files dragged over the composer or images pasted (Ctrl+V) instantly attach with previews. Fully compatible with native Tauri and desktop environments.
+- **Message Operations**: Implemented editing for user messages, deletion for any message in a thread, response regeneration, and retrying of failed streaming responses.
+- **Auto-scroll with Manual Lock**: Added scroll position checking. Auto-scroll stays active when the user is at the bottom, but locks immediately if the user scrolls up to read past messages, avoiding jarring jump-backs.
+- **Failing State Resilience**: Handled failed streams cleanly, providing visual indicator of unreachability, saving error states on the message level, and offering a robust "Retry" action.
+
+**Architectural reasoning.**
+- Attachments are stored as light-weight client-side structures containing local `blob:` URLs. Text translation for the Hermes API remains text-only, separating the user history aesthetic from the reasoning provider's format.
+- Keeping LaTeX and Mermaid parsing purely frontend-centric follows our framework-agnostic goal.
+- State-altering operations (edit, regenerate, retry) truncate the conversation thread synchronously in memory, ensuring that subsequent assistant tokens are generated contextually and without old-state pollution.
+
+**Lessons learned.**
+- Preventing unwanted auto-scroll when a user reads history during streaming is key to a calm UX. A simple scroll threshold (80px) is highly effective.
+- Disabling strict SSL check in Yarn (`yarn config set strict-ssl false`) resolved local environment certification errors during package installations.
+
 ---
 
 ## How to Read This Document

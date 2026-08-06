@@ -118,6 +118,24 @@ describe('HermesProvider', () => {
       expect(onDelta).toHaveBeenNthCalledWith(2, ', world');
     });
 
+    test('assembles text from SSE deltas using carriage return CRLF line endings', async () => {
+      const sse = [
+        'data: {"choices":[{"delta":{"content":"Hello"}}]}\r\n\r\n',
+        'data: {"choices":[{"delta":{"content":", world"}}]}\r\n\r\n',
+        'data: [DONE]\r\n\r\n',
+      ].join('');
+      global.fetch = jest.fn(async () => makeSseResponse([sse]));
+      const p = new HermesProvider({ baseUrl: 'http://h:9000/v1', model: 'm' });
+
+      const onDelta = jest.fn();
+      const full = await p.stream([{ role: 'user', content: 'hi' }], { onDelta });
+
+      expect(full).toBe('Hello, world');
+      expect(onDelta).toHaveBeenCalledTimes(2);
+      expect(onDelta).toHaveBeenNthCalledWith(1, 'Hello');
+      expect(onDelta).toHaveBeenNthCalledWith(2, ', world');
+    });
+
     test('ignores malformed SSE frames without throwing', async () => {
       const sse = [
         'data: {"choices":[{"delta":{"content":"A"}}]}\n\n',

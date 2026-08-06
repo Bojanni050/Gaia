@@ -30,6 +30,10 @@ export default function GaiaDesktop() {
           health={g.health}
           onSend={g.send}
           onStop={g.stop}
+          onEdit={g.editMessage}
+          onDelete={g.deleteMessage}
+          onRegenerate={g.regenerate}
+          onRetry={g.retry}
         />
       </main>
     </motion.div>

@@ -101,3 +101,32 @@
 #====================================================================================================
 # Testing Data - Main Agent and testing sub agent both should log testing data below this section
 #====================================================================================================
+
+## user_problem_statement: "Fix streaming in gaia interface"
+## backend: []
+## frontend:
+##   - task: "Fix SSE Streaming Parser"
+##     implemented: true
+##     working: true
+##     file: "frontend/src/gaia/integration/reasoning/HermesProvider.js"
+##     stuck_count: 0
+##     priority: "high"
+##     needs_retesting: false
+##     status_history:
+##       - working: true
+##         agent: "main"
+##         comment: "Normalized CRLF (\\r\\n) to LF (\\n) in stream buffer to support standard HTTP SSE headers."
+## metadata:
+##   created_by: "main_agent"
+##   version: "1.0"
+##   test_sequence: 1
+##   run_ui: false
+## test_plan:
+##   current_focus:
+##     - "Fix SSE Streaming Parser"
+##   stuck_tasks: []
+##   test_all: true
+##   test_priority: "high_first"
+## agent_communication:
+##   - agent: "main"
+##     message: "Implemented fix for streaming interface by supporting CRLF carriage return endings in SSE parser. Added and passed unit tests."

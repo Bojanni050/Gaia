@@ -19,13 +19,6 @@ function titleFrom(text) {
 
 /**
  * useConversation — Gaia's conversational state, in memory.
- *
- * The state is intentionally simple for this milestone: a list of in-memory
- * conversations, the active one, and a streaming channel to the reasoning
- * provider. Persistence, memory, knowledge, and tools are out of scope here.
- *
- * On mount, the provider's health is probed. A calm, Gaia-language status
- * is exposed so the desktop can surface (or quietly not surface) it.
  */
 export function useConversation() {
   const provider = useRef(getReasoningProvider()).current;
@@ -129,7 +122,7 @@ export function useConversation() {
           ...prev,
           [convId]: [
             ...current,
-            { id: makeId(), role: 'assistant', content: phrase, createdAt: Date.now() },
+            { id: makeId(), role: 'assistant', content: phrase, createdAt: Date.now(), error: true },
           ],
         };
       });
@@ -139,41 +132,123 @@ export function useConversation() {
     }
   }, [provider]);
 
-  const send = useCallback(async (text) => {
+  const send = useCallback(async (text, attachments = []) => {
     const userText = (text || '').trim();
-    if (!userText) return;
+    if (!userText && attachments.length === 0) return;
 
     let convId = activeId;
     if (!convId) {
-      convId = newConversation(userText);
+      convId = newConversation(userText || 'Attached files');
     } else {
-      setConversations((c) => c.map((x) => (x.id === convId ? { ...x, title: titleFrom(userText) } : x)));
+      if (userText) {
+        setConversations((c) => c.map((x) => (x.id === convId ? { ...x, title: titleFrom(userText) } : x)));
+      }
     }
+
+    const newMsg = { id: makeId(), role: 'user', content: userText, attachments, createdAt: Date.now() };
 
     setByConv((prev) => {
       const current = prev[convId] || [];
       return {
         ...prev,
-        [convId]: [
-          ...current,
-          { id: makeId(), role: 'user', content: userText, createdAt: Date.now() },
-        ],
+        [convId]: [...current, newMsg],
       };
     });
 
+    const currentConvMessages = byConv[convId] || [];
     const transcript = buildTranscript([
       { role: 'system', content: SOUL_SYSTEM },
-      ...(byConv[convId] || []),
-      { role: 'user', content: userText },
+      ...currentConvMessages,
+      newMsg,
     ]);
 
     await runStream(convId, transcript);
   }, [activeId, byConv, newConversation, runStream]);
 
+  const editMessage = useCallback(async (messageId, newContent) => {
+    if (!activeId) return;
+
+    const current = byConv[activeId] || [];
+    const index = current.findIndex((x) => x.id === messageId);
+    if (index === -1) return;
+
+    const truncated = current.slice(0, index + 1);
+    truncated[index] = {
+      ...truncated[index],
+      content: newContent,
+      createdAt: Date.now(),
+    };
+
+    setByConv((prev) => ({
+      ...prev,
+      [activeId]: truncated,
+    }));
+
+    const transcript = buildTranscript([
+      { role: 'system', content: SOUL_SYSTEM },
+      ...truncated,
+    ]);
+
+    await runStream(activeId, transcript);
+  }, [activeId, byConv, runStream]);
+
+  const deleteMessage = useCallback((messageId) => {
+    if (!activeId) return;
+    setByConv((prev) => {
+      const current = prev[activeId] || [];
+      return {
+        ...prev,
+        [activeId]: current.filter((x) => x.id !== messageId),
+      };
+    });
+  }, [activeId]);
+
+  const regenerate = useCallback(async (messageId) => {
+    if (!activeId) return;
+
+    const current = byConv[activeId] || [];
+    const index = current.findIndex((x) => x.id === messageId);
+    if (index === -1) return;
+
+    const truncated = current.slice(0, index);
+    setByConv((prev) => ({
+      ...prev,
+      [activeId]: truncated,
+    }));
+
+    const transcript = buildTranscript([
+      { role: 'system', content: SOUL_SYSTEM },
+      ...truncated,
+    ]);
+
+    await runStream(activeId, transcript);
+  }, [activeId, byConv, runStream]);
+
+  const retry = useCallback(async (messageId) => {
+    if (!activeId) return;
+
+    const current = byConv[activeId] || [];
+    const index = current.findIndex((x) => x.id === messageId);
+    if (index === -1) return;
+
+    const truncated = current.slice(0, index);
+    setByConv((prev) => ({
+      ...prev,
+      [activeId]: truncated,
+    }));
+
+    const transcript = buildTranscript([
+      { role: 'system', content: SOUL_SYSTEM },
+      ...truncated,
+    ]);
+
+    await runStream(activeId, transcript);
+  }, [activeId, byConv, runStream]);
+
   return {
     conversations, activeId, messages, stream, health,
     newConversation, openConversation, deleteConversation,
-    send, stop,
+    send, stop, editMessage, deleteMessage, regenerate, retry,
   };
 }
 

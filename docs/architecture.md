@@ -16,6 +16,72 @@ framing: "Gaia is a lifelong personal intelligence designed to grow through unde
 
 ---
 
+# Architecture Principles
+
+Build against interfaces.
+
+Not implementations.
+
+Every subsystem has a single responsibility.
+
+Prefer maintainability over cleverness.
+
+Keep implementations replaceable.
+
+---
+
+# Reasoning Pipeline
+
+Intent
+
+↓
+
+Source Resolver
+
+↓
+
+Reasoning Profile
+
+↓
+
+Model Router
+
+↓
+
+Reasoning Model
+
+↓
+
+Gaia Personality Filter
+
+↓
+
+Response
+
+---
+
+# Platform Independence
+
+Gaia is the application.
+
+Desktop, browser and mobile are delivery platforms.
+
+The platform should never define Gaia's identity.
+
+---
+
+# Provider Independence
+
+Reasoning providers are interchangeable.
+
+Memory providers are interchangeable.
+
+Action providers are interchangeable.
+
+Gaia depends on capabilities.
+
+Never on specific products.
+
 ## 1. Guiding Architectural Principles
 
 1. **Frontend-centric desktop product.** Gaia is designed first as a desktop client that communicates with **Hermes Agent** through its streaming API. Depth and presence originate on the desktop.
