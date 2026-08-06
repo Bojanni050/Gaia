@@ -9,7 +9,7 @@ function buildArtifact() {
   console.log('Foundation Engine: Building foundation artifact...');
   try {
     FoundationBuilder.preload();
-    const prompt = FoundationBuilder.buildPrompt();
+    const documents = FoundationBuilder.buildDictionary();
     
     // Ensure the output directory exists
     const dir = path.dirname(ARTIFACT_PATH);
@@ -18,7 +18,7 @@ function buildArtifact() {
     }
     
     // Write the JSON artifact
-    fs.writeFileSync(ARTIFACT_PATH, JSON.stringify({ prompt }, null, 2), 'utf-8');
+    fs.writeFileSync(ARTIFACT_PATH, JSON.stringify({ documents }, null, 2), 'utf-8');
     console.log(`Foundation Engine: Successfully wrote artifact to ${ARTIFACT_PATH}`);
   } catch (err) {
     console.error('Foundation Engine: Failed to build artifact.', err);

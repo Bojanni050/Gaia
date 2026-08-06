@@ -1,4 +1,6 @@
 import artifact from './artifact.json';
+import { ConversationContext } from './context';
+import { FoundationSelector } from './selector';
 
 /**
  * Foundation Engine (Frontend API)
@@ -7,9 +9,27 @@ import artifact from './artifact.json';
  */
 export class FoundationEngine {
   /**
-   * Retrieves the full system prompt built from the foundation documents.
+   * Retrieves the full system prompt built from the dynamically selected foundation documents.
    */
-  public static getPrompt(): string {
-    return artifact.prompt;
+  public static getPrompt(context: ConversationContext): string {
+    const selectedFiles = FoundationSelector.select(context);
+    const availableFiles = Object.keys(artifact.documents || {});
+    
+    const skippedFiles = availableFiles.filter(f => !selectedFiles.includes(f));
+    
+    console.log(
+      'Foundation Selector\n\n' +
+      'Conversation Type:\n' +
+      `${context.type}\n\n` +
+      'Selected:\n' +
+      selectedFiles.map(f => `✓ ${f}`).join('\n') + '\n\n' +
+      'Skipped:\n' +
+      (skippedFiles.length > 0 ? skippedFiles.join('\n') : '(none)')
+    );
+
+    return selectedFiles
+      .map(filename => (artifact.documents as Record<string, string>)[filename])
+      .filter(content => content !== undefined)
+      .join('\n\n---\n\n');
   }
 }

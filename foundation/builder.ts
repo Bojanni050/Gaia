@@ -1,22 +1,26 @@
 import { cache } from './cache';
 
 /**
- * Orchestrates the loading and concatenation of foundation documents.
+ * Orchestrates the loading of foundation documents for the frontend.
  */
 export class FoundationBuilder {
   private static readonly DOCUMENTS = [
     'soul.md',
     'principles.md',
-    'lexicon.md'
+    'lexicon.md',
+    'architecture.md',
+    'evolution.md'
   ];
 
   /**
-   * Retrieves and concatenates the foundation documents into a single prompt string.
+   * Retrieves all foundation documents as a dictionary.
    */
-  public static buildPrompt(): string {
-    return this.DOCUMENTS
-      .map(filename => cache.get(filename))
-      .join('\n\n---\n\n');
+  public static buildDictionary(): Record<string, string> {
+    const dict: Record<string, string> = {};
+    this.DOCUMENTS.forEach(filename => {
+      dict[filename] = cache.get(filename);
+    });
+    return dict;
   }
 
   /**

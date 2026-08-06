@@ -166,8 +166,9 @@ export function useConversation() {
     });
 
     const currentConvMessages = byConv[convId] || [];
+    const context = deriveContext([...currentConvMessages, newMsg]);
     const transcript = buildTranscript([
-      { role: 'system', content: FoundationEngine.getPrompt() },
+      { role: 'system', content: FoundationEngine.getPrompt(context) },
       ...currentConvMessages,
       newMsg,
     ]);
@@ -194,8 +195,9 @@ export function useConversation() {
       [activeId]: truncated,
     }));
 
+    const context = deriveContext(truncated);
     const transcript = buildTranscript([
-      { role: 'system', content: FoundationEngine.getPrompt() },
+      { role: 'system', content: FoundationEngine.getPrompt(context) },
       ...truncated,
     ]);
 
@@ -226,8 +228,9 @@ export function useConversation() {
       [activeId]: truncated,
     }));
 
+    const context = deriveContext(truncated);
     const transcript = buildTranscript([
-      { role: 'system', content: FoundationEngine.getPrompt() },
+      { role: 'system', content: FoundationEngine.getPrompt(context) },
       ...truncated,
     ]);
 
@@ -247,8 +250,9 @@ export function useConversation() {
       [activeId]: truncated,
     }));
 
+    const context = deriveContext(truncated);
     const transcript = buildTranscript([
-      { role: 'system', content: FoundationEngine.getPrompt() },
+      { role: 'system', content: FoundationEngine.getPrompt(context) },
       ...truncated,
     ]);
 
@@ -264,4 +268,30 @@ export function useConversation() {
 
 function buildTranscript(messages) {
   return messages.map((m) => ({ role: m.role, content: m.content }));
+}
+
+function deriveContext(messages) {
+  // Simple heuristic based on the entire conversation text so far
+  const fullText = messages.map(m => m.content).join(' ').toLowerCase();
+  
+  if (
+    fullText.includes('implement') || 
+    fullText.includes('refactor') || 
+    fullText.includes('architecture') || 
+    fullText.includes('prompt') || 
+    fullText.includes('code')
+  ) {
+    return { type: 'technical' };
+  }
+  
+  if (
+    fullText.includes('why did you answer like that') || 
+    fullText.includes('what are your principles') || 
+    fullText.includes('how do you think') || 
+    fullText.includes('evolution')
+  ) {
+    return { type: 'gaia' };
+  }
+  
+  return { type: 'conversation' };
 }
