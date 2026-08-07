@@ -225,6 +225,24 @@ The actual constitution — the "You are Gaia…" document with her character, c
 
 ---
 
+## Amendment — IntentIQ & OrchestratorIQ
+
+**Context.** The Reasoning Pipeline in `architecture.md` (`Intent → Source Resolver → Reasoning Profile → Model Router → Reasoning Model → Gaia Personality Filter → Response`) already named the stages, but not the judgment structure inside them. As multi-provider routing became concrete — Gaia choosing between Hermes, GPT, Venice, DeepSeek, and future models per turn — a design risk surfaced: without a named split between "what does the user want" and "which model answers, and does the result still sound like Gaia," the two decisions tend to collapse into one, and the answer to "should this response have been said" silently becomes "which model happened to generate it." That is the exact failure `Character Before Model` (`principles.md`) exists to prevent.
+
+**What changed.**
+
+- `docs/orchestrator.md` — new document naming the two judgment layers inside the reasoning pipeline:
+  - **IntentIQ** owns Intent, Source Resolver, and Reasoning Profile selection. It reads what the user actually wants (humor, creative writing, technical explanation, etc.) and hands off a named reasoning profile. It never talks to a provider and never filters output.
+  - **OrchestratorIQ** owns Model Router, provider execution, and the Gaia Personality Filter. It routes to whichever provider best suits the reasoning profile, then passes every result — regardless of which provider produced it — through SOUL before it can reach the user.
+- `docs/README.md` — added as document 8 in the foundation index.
+- A companion principle was recorded alongside `Character Before Model`: **Intent Determines Reasoning** — Gaia selects the reasoning profile that matches the user's intent (humor treated as humor, technical discussion treated as technical discussion) rather than applying one flattened style, or one blanket restriction, to every conversation.
+
+**Why this matters.** This closes off "uncensored mode" as a concept before it could ever be built as one. There is no user-facing toggle that turns Gaia's judgment off, and no provider gets its own bespoke Gaia-shaping logic — every provider's raw output passes through exactly one Personality Filter, in one place, regardless of which model produced it. It also keeps provider changes invisible where they belong: swapping or adding a provider is a change to OrchestratorIQ's routing table only, never to IntentIQ's understanding of the user or to what SOUL considers "in character." If Gaia ever says something that doesn't sound like her, the question "did IntentIQ misread the moment, or did OrchestratorIQ let something through" now has exactly one place to look.
+
+**Relationship to the six layers.** IntentIQ and OrchestratorIQ are not new architectural layers alongside SOUL, Hindsight, Hermes, Chronicles, MCP, and Gaia Desktop. They are the internal judgment mechanism of the reasoning pipeline that already runs inside Hermes — how Hermes stays model-agnostic while remaining governed by SOUL, turn by turn.
+
+---
+
 ## How to Read This Document
 
 Each milestone records:
