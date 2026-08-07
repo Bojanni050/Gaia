@@ -181,7 +181,6 @@ export default function Composer({ onSend, onStop, streaming, onDraftChange }) {
           </button>
         )}
       </div>
-      <p className="composer-hint">{L.composerHint}</p>
     </div>
   );
 }

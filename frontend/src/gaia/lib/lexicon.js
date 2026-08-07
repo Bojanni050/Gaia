@@ -20,7 +20,6 @@ export const LANGUAGES = {
     
     // Composer and dropzone
     composerPlaceholder: 'Zeg wat je wilt, of denk hardop…',
-    composerHint: 'Gaia onthoudt wat belangrijk is, en blijft stil als er niets te zeggen valt.',
     dropOverlay: 'Sleep bestanden hierheen om bij te voegen',
 
     // Conversation actions and status
@@ -56,7 +55,6 @@ export const LANGUAGES = {
     
     // Composer and dropzone
     composerPlaceholder: 'Say anything, or just think out loud…',
-    composerHint: 'Gaia keeps what matters, and stays quiet when nothing needs saying.',
     dropOverlay: 'Drop files to attach',
 
     // Conversation actions and status
