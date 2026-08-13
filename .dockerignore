@@ -1,0 +1,12 @@
+node_modules
+frontend/node_modules
+hermes/node_modules
+frontend/build
+hermes/dist
+src-tauri
+.git
+.claude
+.emergent
+memory
+docs/**/*.tmp
+*.log
