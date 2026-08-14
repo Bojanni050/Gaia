@@ -4,6 +4,13 @@
 FROM node:22-slim AS build
 WORKDIR /app
 
+# CRA exposes only REACT_APP_* variables and embeds them at build time.
+# These are deliberately non-secret: nginx/Plesk injects the Hermes key.
+ARG REACT_APP_REASON_ENGINE_URL=/api/hermes/v1
+ARG REACT_APP_REASON_ENGINE_MODEL=hermes-agent
+ENV REACT_APP_REASON_ENGINE_URL=$REACT_APP_REASON_ENGINE_URL
+ENV REACT_APP_REASON_ENGINE_MODEL=$REACT_APP_REASON_ENGINE_MODEL
+
 COPY package.json package-lock.json ./
 RUN npm install
 
