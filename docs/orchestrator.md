@@ -16,13 +16,15 @@ framing: "Gaia is a lifelong personal intelligence designed to grow through unde
 
 ## Why This Document Exists
 
-The [Reasoning Pipeline](./architecture.md#reasoning-pipeline) already names six stages:
+This document describes a reasoning pipeline that runs **inside Hermes**, once Hermes has been chosen as the capability for a turn:
 
 ```
 Intent → Source Resolver → Reasoning Profile → Model Router → Reasoning Model → Gaia Personality Filter → Response
 ```
 
 This document names the two layers of *judgment* that sit inside that pipeline, and draws the line between them precisely — because that line is easy to blur later. Without a clear split, "which model should answer this" and "is this actually Gaia talking" collapse into the same decision, and the [Character Before Model](./principles.md) principle stops being enforceable in practice.
+
+**A note on scope, since two things are now named "Intent."** [architecture.md §4.2–4.3](./architecture.md#4-system-responsibilities--boundaries) name **Logos's `intentIQ`** and **Gaia** herself as the layer that decides *which capability* (Hermes, Melodiq, SongCompanion, MCP, or none) a turn needs at all — that decision happens at Gaia's level, in her [Cognitive Loop](./architecture.md#cognitive-loop), before any capability is invoked. **IntentIQ**, described below, is a different, later, and more narrowly-scoped judgment despite the similar name: it only runs *after* Gaia has already routed a turn to Hermes specifically, and it decides *how Hermes should reason* about that turn — never whether Hermes should be involved in the first place. Logos's `intentIQ` asks "does this turn need a capability, and which one?"; this document's IntentIQ, running inside Hermes, asks "given that Hermes was chosen, what kind of thinking does it need?" Confusing the two re-creates exactly the problem this document exists to prevent — a single, unnamed judgment quietly doing two jobs.
 
 ---
 
@@ -117,9 +119,9 @@ These two principles are why the layers cannot merge. IntentIQ makes Gaia respon
 
 ---
 
-## Relationship to the Six Layers
+## Relationship to Gaia's Structure
 
-IntentIQ and OrchestratorIQ are not a seventh and eighth layer alongside SOUL, Hindsight, Hermes, Chronicles, MCP, and Gaia Desktop (see [architecture.md §1](./architecture.md)). They are the internal judgment structure of the **reasoning pipeline that runs inside Hermes** — the mechanism by which Hermes stays model-agnostic while still being governed by SOUL. IntentIQ and OrchestratorIQ do not own a responsibility SOUL or Hermes doesn't already own; they are how those responsibilities are actually carried out, turn by turn.
+IntentIQ and OrchestratorIQ are not additional layers alongside SOUL, Logos, Hindsight, Gaia's capabilities, and Gaia Desktop (see [architecture.md §1](./architecture.md)). They are the internal judgment structure of the **reasoning pipeline that runs inside Hermes-the-capability, once Gaia has already decided, through Logos's `intentIQ`, that Hermes is the capability this turn needs** — the mechanism by which Hermes stays model-agnostic while still being governed by SOUL. IntentIQ and OrchestratorIQ do not own a responsibility SOUL, Logos, or Hermes doesn't already own; they are how Hermes's own responsibility is actually carried out, turn by turn, after Gaia has decided Hermes is the right capability at all.
 
 ---
 

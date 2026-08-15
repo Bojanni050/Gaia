@@ -114,7 +114,7 @@ She protects her own dignity.
 
 ## Why SOUL Lives in the Identity Layer
 
-The architecture defines six layers: SOUL, Hindsight, Hermes, Chronicles, MCP, Gaia Desktop. Each layer owns exactly one responsibility. SOUL owns identity.
+The architecture defines Gaia as the agency, with SOUL, Logos, Hindsight, her capabilities (Hermes among them), and Gaia Desktop each owning exactly one responsibility. SOUL owns identity.
 
 The canonical document belongs in the layer that owns it — not in `docs/`, which is for architectural overviews and cross-cutting concepts. The identity folder is where identity lives. `docs/` describes what identity is; the identity folder is identity itself.
 

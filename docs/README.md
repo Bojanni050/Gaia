@@ -12,27 +12,28 @@ framing: "Gaia is a lifelong personal intelligence designed to grow through unde
 
 > **Gaia is a lifelong personal intelligence designed to grow through understanding.**
 
-This is the long-term foundation for Gaia. Every document reinforces the same product philosophy and preserves the clean separation of **identity, memory, reasoning, knowledge, action, and experience**. When any decision is unclear, defer to `vision.md`.
+This is the long-term foundation for Gaia. Every document reinforces the same product philosophy: Gaia is the agency, not a shell around any one capability, and she preserves a clean separation between **identity, cognition, memory, capability, and experience**. When any decision is unclear, defer to `vision.md`.
 
 ## The Documents
 
 | # | Document | Defines |
 |---|----------|---------|
 | 1 | [vision.md](./vision.md) | What/why/who Gaia is, philosophy, values, success criteria, what she must never become |
-| 2 | [architecture.md](./architecture.md) | System boundaries (SOUL · Hindsight · Hermes · Chronicles · MCP · Desktop), flows, streaming lifecycle, storage abstraction, model agnosticism |
+| 2 | [architecture.md](./architecture.md) | System boundaries (SOUL · Logos · Hindsight · Capabilities [Hermes, Melodiq, SongCompanion, MCP, …] · Gaia Desktop), flows, streaming lifecycle, storage abstraction, model agnosticism |
 | 3 | [design-language.md](./design-language.md) | How Gaia feels daily; visual, spatial, motion, and communication philosophy |
 | 4 | [personality.md](./personality.md) | Gaia as a person-like presence; style, initiative, boundaries, trust, consistency |
 | 5 | [roadmap.md](./roadmap.md) | V1→V3→Long-term, MoSCoW, intentionally small V1, maturity path |
 | 6 | [coding-standards.md](./coding-standards.md) | Structure, contracts, state, testing, dependency governance, maintainability |
 | 7 | [ui-principles.md](./ui-principles.md) | Conversation-first, calm, silence, motion-as-meaning, legible growth |
-| 8 | [orchestrator.md](./orchestrator.md) | IntentIQ (intent → reasoning profile) vs. OrchestratorIQ (model routing → Gaia Personality Filter) |
+| 8 | [orchestrator.md](./orchestrator.md) | IntentIQ (intent → reasoning profile) vs. OrchestratorIQ (model routing → Gaia Personality Filter), both inside Hermes, downstream of Logos |
 
-## The Six Durable Layers
+## Gaia's Structure
 
-- **SOUL** → Identity  ·  **Hindsight** → Memory  ·  **Hermes** → Reasoning
-- **Chronicles** → Knowledge  ·  **MCP** → Actions  ·  **Gaia Desktop** → Experience
+- **Gaia** → the agency herself — acts, decides, maintains continuity.
+- **SOUL** → Identity  ·  **Logos** → Cognition (`intentIQ` + `reasonIQ`, Gaia's own reasoning faculty)  ·  **Hindsight** → Memory, load-bearing for continuity, never optional
+- **Capabilities** → optional instruments Gaia reaches for when they serve her goals — Hermes (reasoning), Melodiq (music), SongCompanion (song work), MCP (actions), and others  ·  **Gaia Desktop** → Experience
 
-These remain separate over time. No system absorbs another's role.
+These remain separate over time. No system absorbs another's role. No capability — Hermes included — is a default; Gaia decides, turn by turn, whether one is needed at all.
 
 ## Resolved Open Questions (stances documented)
 
@@ -40,4 +41,4 @@ These remain separate over time. No system absorbs another's role.
 - **Memory provenance visibility?** → Always available on demand, never omnipresent (architecture §8, ui-principles §9).
 - **Proactivity level?** → Earned, tiered, reversible; ceiling is "never noisy" (personality §2, roadmap §8).
 - **Personality variability?** → Stable core, subtle contextual expression (personality §10).
-- **Separate backend trigger?** → Only on a proven need Hermes cannot own (architecture §9).
+- **Separate backend trigger?** → Only on a proven need Gaia or her capabilities cannot own (architecture §9).

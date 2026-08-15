@@ -12,7 +12,7 @@ framing: "Gaia is a lifelong personal intelligence designed to grow through unde
 
 > **Gaia is a lifelong personal intelligence designed to grow through understanding.**
 >
-> These standards exist to protect **long-term maintainability** and the **strict separation of concerns** (SOUL, Hindsight, Hermes, Chronicles, MCP, Gaia Desktop) that make Gaia who she is. Code is written to be read and maintained for years.
+> These standards exist to protect **long-term maintainability** and the **strict separation of concerns** (SOUL, Logos, Hindsight, Gaia's capabilities — Hermes among them — and Gaia Desktop) that make Gaia who she is. Code is written to be read and maintained for years.
 
 ---
 
@@ -148,8 +148,8 @@ Gaia Desktop is the primary surface; integration layers are thin clients of Herm
 
 ## 11. Long-Term Maintainability Rules
 
-1. **Protect the six boundaries above all.** SOUL, Hindsight, Hermes, Chronicles, MCP, Desktop — no layer absorbs another, ever. This is the single most important rule.
-2. **Keep the client thin and honest.** Reasoning, memory, knowledge, and identity live behind Hermes and its adjacent contracts — not in Gaia Desktop.
+1. **Protect the boundaries above all.** SOUL, Logos, Hindsight, Gaia's capabilities (Hermes among them), Desktop — no layer absorbs another, ever. This is the single most important rule.
+2. **Keep the client thin and honest.** Cognition and orchestration live in Gaia and Logos; reasoning, memory, and identity live behind capability contracts — not in Gaia Desktop. Gaia Desktop knows only Gaia.
 3. **Stay storage-abstract and model-agnostic.** These are not V1 conveniences; they are permanent invariants.
 4. **Optimize for readability and deletion.** Code will be read and changed far more than it is written.
 5. **Resist feature accretion.** Depth of understanding, not breadth of features, is the product. Say no by default.

@@ -243,6 +243,43 @@ The actual constitution — the "You are Gaia…" document with her character, c
 
 ---
 
+## Amendment — The Intent Engine (Hermes Becomes a Tool, Not the Entry Point)
+
+**Context.** Since Milestone 2, every turn from Gaia Desktop went straight to Hermes — architecture.md said so explicitly ("Gaia Desktop knows only Hermes"; "Hermes Agent is the orchestration entry point"). That was the right call for "Gaia Speaks": there was exactly one capability, so there was nothing to route between. It stopped being right the moment Gaia was meant to have more than one capability. With only Hermes wired up, "send everything to Hermes" and "understand intent, then decide" are indistinguishable — the seam was never built because it was never exercised. Left alone, every future capability (a direct Hindsight lookup, a direct MCP action) would have been bolted onto Hermes from the inside, because Hermes was the only door in. That is precisely how Gaia ends up as "just a shell around Hermes" instead of an intelligence that happens to use Hermes for reasoning.
+
+**What changed.**
+
+- `docs/architecture.md` — added a new layer, the **Intent Engine** (§4.2), sitting between Gaia Desktop and every capability. Gaia Desktop now depends on the Intent Engine only; the Intent Engine depends on SOUL and routes to Hermes, Hindsight, Chronicles, and MCP. The system diagram (§2), the interaction flow (§5), the streaming lifecycle (§10), and the extensibility rules (§13) were updated to route through it. §9 (backend justification) was amended to clarify the Intent Engine is a client-side routing layer, not a new backend — it does not trigger the "no speculative backends" stance.
+- `docs/orchestrator.md` — added a scope note distinguishing the new, Gaia-level **Intent Engine** (decides *whether* Hermes is needed at all) from the existing, Hermes-internal **IntentIQ** (decides, once Hermes has already been chosen, *what kind of reasoning* it should do). The "Relationship to the Six Layers" section became "Seven Layers."
+- `docs/vision.md`, `docs/README.md`, `docs/coding-standards.md`, `docs/roadmap.md`, `docs/soul.md` — the "six layers" references updated to seven, with the Intent Engine's one-line responsibility (understanding & routing) stated consistently everywhere the other six are listed.
+- `docs/roadmap.md` — added an Intent Engine **routing skeleton** as a V1 Could Have: the seam is introduced now, with Hermes as its only routed capability. No new non-Hermes capability ships in V1; only the dispatch point that will let them ship later without re-architecting how Gaia Desktop talks to her capabilities.
+
+**Why this matters.** The instruction that triggered this amendment was blunt: *"Gaia is momenteel slechts een schil om Hermes heen. Dat is niet het doel."* — Gaia is currently just a shell around Hermes, and that is not the goal. Hermes was always meant to be one of Gaia's tools, chosen when reasoning is genuinely what a turn needs — not the default everything passes through because it happens to be the only thing wired up. Naming the Intent Engine now, while only one capability exists behind it, means the routing decision gets designed deliberately instead of discovered accidentally the first time a second capability shows up. It also keeps `Character Before Model` and `Intent Determines Reasoning` intact: those principles governed *how* Hermes reasons once selected; they said nothing about *whether* Hermes should be involved at all. That question needed its own owner, and now it has one.
+
+**What this does not change.** SOUL still governs identity. Hindsight is still storage-abstract. Hermes still owns model-agnostic provider routing internally, and IntentIQ/OrchestratorIQ still run exactly where they always did — inside Hermes, after the Intent Engine has already handed it a turn. No provider ever surfaces to the user. The only thing that moved is *where the first decision is made*: at Gaia's level, not inside the one capability that used to be the only option.
+
+**Open question.** V1 ships the Intent Engine as a skeleton with a single routed capability (Hermes), so its routing logic is trivially "always Hermes." The real test — does it route correctly once a second capability exists — is deferred until a concrete non-Hermes capability is chosen (see roadmap.md V2/V3). Until then, treat the Intent Engine's decision function as unproven, not as validated by V1 shipping.
+
+---
+
+## Amendment — Gaia the Agency, Logos the Cognitive Layer (Intent Engine Superseded)
+
+**Context.** The Intent Engine amendment above got the direction right — Hermes had to stop being the default entry point — but named the fix as a *routing layer* sitting between Gaia Desktop and her capabilities. That framing didn't survive contact with the actual near-term capability set. Once Melodiq (music) and SongCompanion (song-related work) became concrete, "a layer that routes turns to capabilities" still implicitly treated *some* capability as the answer to every turn — it just moved the assumption from "always Hermes" to "always one of Hermes/Hindsight/Chronicles/MCP." It never named who was doing the routing, or why a turn might need no capability at all. `architecture.md` v2.0.0 fixes that by naming Gaia herself, not a routing layer, as the thing that decides.
+
+**What changed.**
+
+- `docs/architecture.md` (now v2.0.0) — replaced the Intent Engine with **Gaia** as the agency (acts, decides, maintains continuity) and **Logos** as her cognitive reasoning faculty (`intentIQ` + `reasonIQ` — interprets input, constructs meaning, but does not act or route on its own). **Capabilities** (Hermes, Melodiq, SongCompanion, MCP, and others) are named explicitly as optional instruments Gaia reaches for — never a default, never assumed. **Feedback** is named as a first-class input into Logos, not an implicit side effect of memory policies. §15 records the full "Key Distinctions from Previous Architecture" table (v1.0.0 → v2.0.0); §16 lists `orchestrator.md` as the first downstream document to recontextualize.
+- `docs/orchestrator.md` — the scope note now distinguishes **Logos's `intentIQ`** (Gaia-level: decides whether a capability is needed at all, and which one) from **this document's IntentIQ** (Hermes-internal: once Hermes is chosen, decides what kind of reasoning it needs). "Relationship to the Seven Layers" became "Relationship to Gaia's Structure."
+- `docs/vision.md`, `docs/README.md`, `docs/coding-standards.md`, `docs/roadmap.md`, `docs/soul.md` — "Intent Engine" and the seven/six-layer counting language replaced with the Gaia/SOUL/Logos/Hindsight/Capabilities/Desktop structure. **Hindsight is explicitly not folded into "capabilities"** in any of these rewrites — it stays a distinct, load-bearing layer, unlike Hermes/Melodiq/SongCompanion/MCP, which are genuinely optional.
+- `docs/roadmap.md` — the V1 "Intent Engine routing skeleton" Could-Have became a **capability router skeleton** living inside Gaia's own orchestration (architecture.md §2, §9), same intent: Hermes is the only wired capability in V1, but the seam exists for V2/V3.
+- The untracked scratch file `docs/architecturev2` — an intermediate draft matching the Intent Engine model above — was deleted; this log entry and the previous one now carry that history.
+
+**Why this matters.** Naming Gaia as the agency, rather than naming a routing layer, closes the gap the Intent Engine amendment left open: a routing layer can still be designed as if some capability is always the right answer, just later and less visibly. An agency that *may* reach for a capability — or may not — cannot collapse back into a shell around any one of them, Hermes included. This also gives Melodiq and SongCompanion a home that doesn't require inventing a new routing concept per capability: they're instruments alongside Hermes, governed by the same rule (§14: "No capability is the default").
+
+**What this does not change.** SOUL still governs identity, read-only to Logos and capabilities. Hindsight is still storage-abstract, and still not optional — Logos and Gaia depend on its memory contracts for continuity the same way they depend on SOUL for identity; nothing about naming Gaia as the agency makes memory something she can take or leave. IntentIQ/OrchestratorIQ still run exactly where they always did — inside Hermes, downstream of whatever decided Hermes was needed. No provider ever surfaces to the user. What moved, again, is *where the first decision is named as living*: not in a dedicated routing layer, but in Gaia herself, via Logos.
+
+---
+
 ## How to Read This Document
 
 Each milestone records:

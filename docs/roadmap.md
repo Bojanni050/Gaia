@@ -20,7 +20,7 @@ framing: "Gaia is a lifelong personal intelligence designed to grow through unde
 
 - **Small, then deep.** Start with the smallest thing that is genuinely useful and calm. Expand depth before breadth.
 - **Trust is the pacing function.** New proactivity or memory capabilities ship only after trust supports them.
-- **Boundaries never regress.** No milestone collapses the separation between SOUL, Hindsight, Hermes, Chronicles, MCP, and Desktop.
+- **Boundaries never regress.** No milestone collapses the separation between SOUL, Logos, Hindsight, Gaia's capabilities (Hermes among them), and Desktop.
 - **No speculative backends.** New backend layers appear only when a proven need arises (architecture §9).
 - **Metrics we ignore:** engagement minutes, message volume, feature count. **Metrics we watch:** relevance of recall, welcomeness of proactivity, felt continuity, user-described trust.
 
@@ -59,6 +59,7 @@ framing: "Gaia is a lifelong personal intelligence designed to grow through unde
 ### Could Have
 - Minimal Chronicles read integration for a few durable facts.
 - Light personalization of greeting/tone.
+- **Capability router skeleton** (architecture §2, §9): the seam inside Gaia's own orchestration that will let her decide which capability a turn needs, introduced now with Hermes as its only routed capability. This is the skeleton, not new capabilities — it exists so V2/V3 can add Melodiq, SongCompanion, direct-Hindsight, and MCP routing without re-architecting how Gaia dispatches a turn.
 
 ### Explicitly NOT in V1
 - Proactive initiative of any kind.
@@ -66,6 +67,7 @@ framing: "Gaia is a lifelong personal intelligence designed to grow through unde
 - Multi-surface (web/mobile/voice).
 - Offline-first / sync.
 - Memory editing/forgetting UI (view-only is enough for V1).
+- Non-Hermes capability routing targets (the skeleton may exist; only Hermes is actually wired to it).
 
 ---
 
