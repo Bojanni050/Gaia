@@ -189,6 +189,29 @@ The next milestone introduces the first reflective layer: Hindsight. Gaia will b
 
 ---
 
+## Milestone 5 — Gaia's Own Hindsight Connection
+
+**Goal.** Give Gaia her first real connection to Hindsight — mirroring the `ReasoningProvider`/`HermesProvider` seam that already exists for reasoning, but for memory. Not the memory view, not automatic reflection-on-turn — just the seam itself, proven against a real Hindsight deployment.
+
+**What was built.**
+- `frontend/src/gaia/integration/memory/`: `MemoryProvider` (abstract contract), `HindsightProvider` (concrete — talks to Hindsight's real HTTP API), `errors.js` (`MemoryUnavailableError`, `MemoryNotFoundError`), `index.js` (`getMemoryProvider()`).
+- A dedicated **`gaia`** bank was created on the existing Hindsight deployment on the Strato VPS — Gaia's own memory, not the general-purpose "bojan" bank other tools already write to, and not the separate `hindsight-friend` tenant behind an unrelated MCP integration. Mission text seeded from architecture.md §6 (reflection and pattern formation, not raw logging).
+- `storeReflection` retains asynchronously (Hindsight's extraction step is LLM-backed and can take 10-20s+; a conversational turn must never block on it — consistent with the asynchronous REFLECT step in the streaming lifecycle, architecture.md §10). `retrieveRelevantContext` maps Hindsight's `recall` results into the `Reflection` shape the contract already declared. `listProvenance`, `editMemory`, and `forget` are wired against Hindsight's history/curate endpoints.
+- Verified end-to-end against the live server (retain → async operation → recall returned the stored content), plus 19 unit tests mirroring `HermesProvider.test.js`'s structure.
+
+**What was found and fixed along the way.** The Hindsight container was reachable from the open internet with no authentication — bound to `0.0.0.0`, confirmed via a successful unauthenticated request from outside the tailnet, even though its own `docker-compose.yml` already specified a Tailscale-only binding that had simply never been applied. This is exactly the kind of infrastructure drift that's easy to miss and dangerous to leave in place for a service holding a person's long-term reflections. Fixed by recreating the container with the config that was already on disk; Gaia now reaches Hindsight only over Tailscale, matching how the Hermes proxy is already kept internal-only.
+
+**Architectural reasoning.**
+- `formPattern`/`queryPatterns` remain unimplemented — Hindsight's nearest equivalent ("mental models") is a later milestone, not this one. Hypotheses (architecture.md §6.1) are also not yet wired; Hindsight has no native hypothesis object, so that needs to be built on top of its existing primitives deliberately, not bolted on here.
+- `forget()` maps to Hindsight's per-item `invalidate` (soft-retire, reversible, excluded from recall immediately) rather than a hard delete — Hindsight only exposes a hard delete at the whole-bank/type level, not per item. Documented as an honest gap against the "forget honored fully and immediately" contract language, not silently glossed over.
+- The default `HindsightProvider` URL points at Hindsight's Tailscale address, never a public one — reachability requires the desktop to be on the tailnet, which is the correct failure mode for a service that should never be open to the internet.
+
+**Lessons learned.** A "let's connect X" request is a good moment to actually check what's running before writing client code against an assumption — the exposure here would not have surfaced from reading docs or code alone.
+
+**Next.** Nothing in the desktop UI reads from this yet. The next step is wiring an actual reflect-on-turn and recall-on-turn path through `useConversation`, and eventually the opt-in memory view (architecture.md §8).
+
+---
+
 ## Amendment — Identity: Attunement vs. Mimicry
 
 **Context.** Gaia was built and refined for a single user first. As the long-term intent to make Gaia available beyond that first relationship became explicit, a latent risk in the personality model surfaced: `personality.md` described Gaia's voice as adaptive — "her phrasing, framing, and register shift toward theirs." For one user, that reads as attentiveness. Generalized to many users, it is the exact mechanism by which Gaia would start to sound like whoever she's talking to, and lose the one thing SOUL exists to guarantee — that she is recognizably herself to everyone, always.

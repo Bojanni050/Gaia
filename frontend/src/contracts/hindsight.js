@@ -2,8 +2,13 @@
  * Hindsight contract — long-term memory. Storage-abstract by design.
  *
  * Gaia depends on capabilities and contracts, NEVER on persistence internals.
- * Memory is reflection and pattern formation, not raw logging. This contract is
- * defined now so the boundary exists in code; wiring arrives in a later version.
+ * Memory is reflection and pattern formation, not raw logging.
+ *
+ * HindsightProvider (gaia/integration/memory/HindsightProvider.js) implements
+ * storeReflection, retrieveRelevantContext, listProvenance, editMemory, and
+ * forget against a real Hindsight instance. formPattern and queryPatterns
+ * are not yet wired — Hindsight's pattern-equivalent (mental models) is a
+ * later milestone.
  *
  * @typedef {'preferences'|'patterns'|'context'|'relationships'} MemoryDomain
  *
@@ -20,7 +25,7 @@
  * @property {string} conversation_id
  * @property {string} observed_at
  *
- * Capabilities (contract only — not yet implemented):
+ * Capabilities:
  *   storeReflection(Reflection)
  *   retrieveRelevantContext(query) -> Reflection[]
  *   formPattern(signals) -> Reflection
