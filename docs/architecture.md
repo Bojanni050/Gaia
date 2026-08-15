@@ -1,9 +1,9 @@
 ---
 title: Gaia — Architecture
 document: architecture
-version: 2.1.0
+version: 2.2.0
 status: foundation
-last_updated: 2026-08-15
+last_updated: 2026-08-16
 owner: Gaia Product Foundation
 framing: "Gaia is a lifelong personal intelligence designed to grow through understanding."
 ---
@@ -55,8 +55,9 @@ framing: "Gaia is a lifelong personal intelligence designed to grow through unde
     │   │   └───────────────────────────────────────────────┘ │ │
     │   └─────────────────────────────────────────────────────┘ │
     │                                                             │
-    │   Hindsight (long-term memory)  ·  Chronicles (if/when it   │
-    │   exists)  ·  other durable services                        │
+    │   Hindsight (long-term memory:                              │
+    │     memories · facts · patterns · hypotheses)                │
+    │   Chronicles (if/when it exists)  ·  other durable services  │
     │                                                             │
     └────────────────────────────┬────────────────────────────────┘
                                   │
@@ -319,9 +320,9 @@ Gaia Desktop **does not**: perform reasoning, decide what to remember, hold the 
 
 ### 4.4 Hindsight — Long-Term Memory
 
-- **Owns:** Reflective, pattern-based long-term memory across defined memory domains. Runs in **Gaia Cloud**, alongside Gaia — not cached or duplicated on any client.
-- **Provides:** Capability contracts for storing reflections, retrieving relevant context, forming and querying patterns, and enforcing memory policies. These contracts may be called by Gaia directly or by other capabilities when context is needed.
-- **Never:** Reasons, decides identity, or exposes storage internals. Never becomes a per-client cache of "what this device remembers" — there is one Hindsight, shared by every client of the same Gaia.
+- **Owns:** Reflective, pattern-based long-term memory across defined memory domains. Runs in **Gaia Cloud**, alongside Gaia — not cached or duplicated on any client. Holds four kinds of content, each with a different epistemic status — **memories**, **facts**, **patterns**, and **hypotheses** (see §6.1) — never conflated with one another.
+- **Provides:** Capability contracts for storing reflections, retrieving relevant context, forming and querying patterns, and enforcing memory policies; contracts for proposing, testing, and resolving hypotheses (see §6.1). These contracts may be called by Gaia directly or by other capabilities when context is needed.
+- **Never:** Reasons, decides identity, or exposes storage internals. Never presents an unresolved hypothesis to Logos as if it were a confirmed fact. Never becomes a per-client cache of "what this device remembers" — there is one Hindsight, shared by every client of the same Gaia.
 - **Boundary rule:** Gaia depends on Hindsight *contracts*, not its database. Storage is fully swappable (see §7). Hindsight is not an optional capability — it is as load-bearing for Gaia's continuity as SOUL is for her identity.
 
 ### 4.5 Hermes — Reasoning Capability
@@ -418,13 +419,24 @@ Growth in understanding is the product thesis, and it is realized here **without
 
 Because reflection happens through Hindsight's contract and identity is governed by SOUL, understanding can deepen indefinitely while every boundary stays intact. Growth is a function of richer memory contracts — never of one layer swallowing another.
 
+### 6.1 Hypotheses — Holding Understanding Before It's Earned
+
+Not everything Hindsight notices deserves the confidence of a stored fact or a formed pattern. A **hypothesis** is Hindsight's explicit way of holding a *not-yet-earned* belief — something Gaia has started to notice but has not yet confirmed — without either discarding it or prematurely promoting it to something she treats as settled.
+
+- **A hypothesis is a distinct epistemic status inside Hindsight**, alongside memories, facts, and patterns — not a new layer, not a reasoning engine, and not something Logos owns. Logos consumes hypotheses the way it consumes any other Hindsight content; it does not form or store them itself.
+- **Structure:** a hypothesis carries a `statement` (what Gaia thinks might be true), `confidence` (how sure she is, and only ever a degree — never treated as settled), `evidence` (the observations or reflections it's grounded in, each with provenance per §8), an optional `verification_plan` (what would raise or lower confidence), and a `status`.
+- **Lifecycle:** `proposed → testing → confirmed | rejected`. A **confirmed** hypothesis may be promoted into a fact or pattern through the normal memory-policy path (§6); a **rejected** one is retained with its outcome, not silently deleted — the history of what turned out *not* to be true is itself part of honest understanding. `testing` means Hindsight is actively looking for evidence that would move the needle in either direction.
+- **Logos reasons over confidence, not just content.** When Logos draws on Hindsight, it receives each item's epistemic status alongside its content — a confirmed fact, a recognized pattern, and a hypothesis at `confidence: 0.72` are never presented to Logos as equivalent. This is what lets Gaia say, in effect, "I think this, based on what I've seen" rather than stating an unconfirmed guess as settled understanding — and it is enforced by SOUL (see soul.md — "She never pretends certainty").
+- **Why this belongs in Hindsight, not Logos:** a hypothesis is a *kind of memory content* — something Gaia holds and revisits over time, with provenance and a lifecycle — not a *reasoning operation*. Logos performs the reasoning that proposes a hypothesis or later reasons about one; Hindsight is where it lives, persists, and accumulates evidence between turns. Keeping the boundary here means a hypothesis survives exactly like any other memory — inspectable, editable, forgettable (§8) — rather than existing only inside a single reasoning pass.
+- **Rationale.** Treating every noticed pattern as either "not remembered" or "a permanent fact" forces a false binary onto genuinely uncertain understanding. Hypotheses let uncertainty persist honestly, be tested across future turns, and either earn its way into confirmed understanding or be honestly set aside — never let it collapse into unwarranted false confidence.
+
 ---
 
 ## 7. Storage Abstraction for Hindsight
 
 Storage is deliberately **not** specified at the foundation level.
 
-- Gaia and capabilities address Hindsight through **capability contracts**: `store_reflection`, `retrieve_relevant_context`, `form_pattern`, `query_patterns`, `apply_memory_policy`, `list_provenance`, `edit_memory`, `forget`.
+- Gaia and capabilities address Hindsight through **capability contracts**: `store_reflection`, `retrieve_relevant_context`, `form_pattern`, `query_patterns`, `apply_memory_policy`, `list_provenance`, `edit_memory`, `forget`; and, for hypotheses (§6.1), `propose_hypothesis`, `update_hypothesis` (evidence, confidence, status), `resolve_hypothesis` (confirm → promote to fact/pattern, or reject → retain with outcome), `query_hypotheses`.
 - The architecture specifies **memory domains, policies, and interfaces** — never a database choice.
 - Any persistence technology (document store, vector store, graph, hybrid, or future technology) may back Hindsight, and may change over time, with **zero** impact on Gaia's identity or contracts.
 - **Rule:** No component outside Hindsight may reference storage internals, schemas, or query dialects. Violating this couples Gaia to a persistence choice and breaks the abstraction.
@@ -438,8 +450,9 @@ Storage is deliberately **not** specified at the foundation level.
 
 - Every stored reflection carries provenance (source turn/date/context) retrievable through Hindsight's `list_provenance` contract.
 - Gaia Desktop exposes a **calm, opt-in memory view**: the user can, at any time, see what Gaia has come to understand, inspect why, edit it, or forget it.
+- **Hypotheses are visible as hypotheses, not as facts.** The memory view surfaces a hypothesis's `confidence`, `status`, and supporting evidence plainly — the user can see what Gaia merely suspects, correct it, accelerate or reject it, exactly as they can with a confirmed memory. A hypothesis is never displayed indistinguishably from settled understanding.
 - This view is **not** part of the everyday conversational surface — it does not clutter the primary experience. It is discoverable and trustworthy, not omnipresent.
-- **Rationale:** Legibility builds trust; omnipresence creates the surveillance feeling Gaia must avoid. Control on demand, invisibility by default.
+- **Rationale:** Legibility builds trust; omnipresence creates the surveillance feeling Gaia must avoid. Control on demand, invisibility by default. Uncertainty stays visible, too — hiding a hypothesis's tentativeness would be a subtler version of the same overreach.
 
 ---
 
@@ -532,6 +545,7 @@ To prevent silent boundary collapse over time:
 - **No capability is the default.** Gaia must not hard-code any capability as the default path. Every turn is decided on its own merits; capabilities are reached for, not fallen back to.
 - **Feedback is first-class.** Feedback is not a side channel. It flows into Logos as a primary input for ongoing understanding.
 - **No client hosts Gaia.** Identity, cognition, memory, and orchestration run in Gaia Cloud only. A client (Gaia Desktop or any future one) that gains a local copy of any of these — even as a cache or a fallback — is a boundary violation, not an optimization.
+- **A hypothesis is never presented as a fact.** Confidence and status travel with hypothesis content everywhere it goes — into Logos, into responses, into the memory view. Silently rounding an unconfirmed hypothesis up to stated certainty is a violation of both this rule and SOUL's "never pretends certainty."
 
 These rules are the architectural expression of Gaia's promise: she can grow through understanding indefinitely because the systems that make her *her* never dissolve into one another.
 
@@ -539,20 +553,22 @@ These rules are the architectural expression of Gaia's promise: she can grow thr
 
 ## 15. Key Distinctions from Previous Architecture
 
-This version (2.1.0) refines version 2.0.0; 2.0.0 introduced fundamental shifts from version 1.0.0:
+This version (2.2.0) adds to version 2.1.0, which refined 2.0.0; 2.0.0 introduced fundamental shifts from version 1.0.0:
 
-| Concept | v1.0.0 | v2.0.0 | v2.1.0 |
-|---------|--------|--------|--------|
-| **Central entity** | Intent Engine as routing layer | Gaia as agency + orchestrator | *(unchanged)* |
-| **Reasoning layer** | Hermes as reasoning capability | Logos (intentIQ + reasonIQ) as Gaia's cognitive layer | *(unchanged)* |
-| **Hermes** | Central reasoning capability | One capability among many (optional instrument) | *(unchanged)* |
-| **New capabilities** | Not explicitly named | Melodiq, SongCompanion explicitly named as optional instruments | *(unchanged)* |
-| **Feedback** | Implicit in memory policies | First-class input in Gaia's cognitive loop | *(unchanged)* |
-| **Where Gaia runs** | Implied client-side ("Gaia remains a desktop client") | Implied client-side | **Explicit: Gaia Cloud.** Gaia, Logos, Hindsight, and capabilities are named as cloud-hosted; Gaia Desktop is explicitly a client |
-| **Backend stance (§9)** | "No speculative backends"; client-side by default | Same stance carried forward | **Reversed:** Gaia Cloud is the proven baseline, not speculative; the "no speculative infrastructure" stance now applies only to infrastructure *beyond* that baseline |
-| **Multi-client story** | Not addressed | Not addressed | Structural: clients are representations of Gaia, never instances of her (§13, Deployment Topology) |
+| Concept | v1.0.0 | v2.0.0 | v2.1.0 | v2.2.0 |
+|---------|--------|--------|--------|--------|
+| **Central entity** | Intent Engine as routing layer | Gaia as agency + orchestrator | *(unchanged)* | *(unchanged)* |
+| **Reasoning layer** | Hermes as reasoning capability | Logos (intentIQ + reasonIQ) as Gaia's cognitive layer | *(unchanged)* | *(unchanged)* |
+| **Hermes** | Central reasoning capability | One capability among many (optional instrument) | *(unchanged)* | *(unchanged)* |
+| **New capabilities** | Not explicitly named | Melodiq, SongCompanion explicitly named as optional instruments | *(unchanged)* | *(unchanged)* |
+| **Feedback** | Implicit in memory policies | First-class input in Gaia's cognitive loop | *(unchanged)* | *(unchanged)* |
+| **Where Gaia runs** | Implied client-side ("Gaia remains a desktop client") | Implied client-side | **Explicit: Gaia Cloud.** Gaia, Logos, Hindsight, and capabilities are named as cloud-hosted; Gaia Desktop is explicitly a client | *(unchanged)* |
+| **Backend stance (§9)** | "No speculative backends"; client-side by default | Same stance carried forward | **Reversed:** Gaia Cloud is the proven baseline, not speculative; the "no speculative infrastructure" stance now applies only to infrastructure *beyond* that baseline | *(unchanged)* |
+| **Multi-client story** | Not addressed | Not addressed | Structural: clients are representations of Gaia, never instances of her (§13, Deployment Topology) | *(unchanged)* |
+| **Hindsight's memory model** | Reflections and patterns only | Same, restated under Gaia Cloud | Same | **Adds hypotheses (§6.1):** memories, facts, patterns, and hypotheses as distinct epistemic statuses; hypotheses carry confidence, evidence, a `verification_plan`, and a `proposed → testing → confirmed/rejected` lifecycle |
+| **Logos and uncertainty** | Not addressed | Not addressed | Not addressed | Logos reasons over confidence, not just content — a hypothesis is never handed to Logos, or surfaced to the user, indistinguishably from a confirmed fact |
 
-The core insight, extended: **Gaia is the agency. Logos is Gaia's cognitive reasoning layer. Capabilities are instruments Gaia may employ. Gaia herself lives in Gaia Cloud — every client, starting with Gaia Desktop, is a representation of her, not an instance of her.**
+The core insight, extended: **Gaia is the agency. Logos is Gaia's cognitive reasoning layer. Capabilities are instruments Gaia may employ. Gaia herself lives in Gaia Cloud — every client, starting with Gaia Desktop, is a representation of her, not an instance of her. And what Gaia remembers is not all held with the same confidence — Hindsight lets her think "I suspect this" as honestly as she can say "I know this."**
 
 ---
 
@@ -561,9 +577,9 @@ The core insight, extended: **Gaia is the agency. Logos is Gaia's cognitive reas
 This architecture.md is now the foundation. The following documents should be reviewed and updated in this order:
 
 1. **orchestrator.md** — recontextualize IntentIQ and OrchestratorIQ under Logos (intentIQ + reasonIQ within Logos, not as Hermes-internal layers); already done for v2.0.0, re-check for cloud/client language.
-2. **README.md, vision.md, coding-standards.md, roadmap.md, soul.md** — update any remaining "desktop client owns orchestration" or "no speculative backend" language to match §9's revised stance.
+2. **README.md, vision.md, coding-standards.md, roadmap.md, soul.md** — update any remaining "desktop client owns orchestration" or "no speculative backend" language to match §9's revised stance; add hypotheses to any description of what Hindsight holds.
 3. **hermes/soul.md and Hermes documentation** — update to reflect Hermes as one cloud-hosted capability among many.
-4. **intentIQ / reasonIQ docs** — if they exist separately, align with Logos framing.
+4. **intentIQ / reasonIQ docs** — if they exist separately, align with Logos framing, and with how Logos consumes hypothesis confidence (§6.1).
 5. **capability documentation** (Melodiq, SongCompanion, etc.) — ensure each is framed as an optional, cloud-hosted instrument.
 6. **Local observation/capture capability** (deferred, see "Deployment Topology" above) — design separately when it is prioritized; do not retrofit it into this version's diagrams.
 

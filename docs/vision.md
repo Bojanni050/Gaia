@@ -36,7 +36,7 @@ Gaia is the agency herself — not a shell around any single capability. She is 
 |-------|----------------|
 | **SOUL** | Identity — the stable constitution that governs who Gaia is |
 | **Logos** | Cognition — Gaia's own reasoning faculty (`intentIQ` + `reasonIQ`); interprets input and constructs meaning, but does not act |
-| **Hindsight** | Long-term memory — reflection and pattern formation, storage-abstract. Load-bearing for continuity; not an optional capability |
+| **Hindsight** | Long-term memory — reflection, pattern formation, and hypotheses (tentative understanding, held with explicit confidence until confirmed or rejected), storage-abstract. Load-bearing for continuity; not an optional capability |
 | **Capabilities** | Optional instruments Gaia reaches for when they serve her goals — Hermes (reasoning), Melodiq (music), SongCompanion (song work), MCP (actions), and others. No capability is assumed to be the answer to every turn |
 | **Gaia Desktop** | Experience — the primary application, and Gaia's first **client** |
 

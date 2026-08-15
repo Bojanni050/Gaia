@@ -87,6 +87,7 @@ framing: "Gaia is a lifelong personal intelligence designed to grow through unde
 - Chronicles read/write for structured knowledge the user maintains.
 - Relevance-driven recall: the right past detail at the right moment, quietly.
 - Tunable memory policies (what Gaia is eligible to reflect on).
+- **Hypotheses in Hindsight** (architecture §6.1): tentative understanding held with explicit confidence and a `proposed → testing → confirmed/rejected` lifecycle, surfaced in the memory view distinctly from confirmed facts — Gaia can say "I think" as honestly as "I know."
 
 ### Could Have
 - Gentle, dismissible suggestions at natural pauses (first taste of initiative, tightly bounded).

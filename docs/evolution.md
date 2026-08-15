@@ -296,6 +296,22 @@ The actual constitution — the "You are Gaia…" document with her character, c
 
 ---
 
+## Amendment — Hypotheses: Holding Understanding Before It's Earned
+
+**Context.** Hindsight, as specified through v2.1.0, recognized two kinds of durable content — reflections and patterns — and one binary: something was either not remembered, or remembered as settled. That binary doesn't match how understanding actually forms. Gaia might notice, after a handful of observations, that Bo tends to be more creatively productive late at night — a real signal, but not yet something she should treat with the same confidence as a confirmed fact or a repeatedly-verified pattern. Forcing that signal into "not remembered" throws away a genuine, useful observation; forcing it into "remembered as fact" overstates what Gaia actually knows and risks exactly the false-certainty SOUL already forbids ("she never pretends certainty"). The instruction that triggered this amendment named a concrete prior art for the missing middle: the `hypothesis` concept from the Stash memory-layer project, where a hypothesis is explicitly not-yet-fact — carrying `confidence`, `evidence`, an optional `verification_plan`, and a lifecycle (`proposed → testing → confirmed/rejected`), with a confirmed hypothesis able to graduate into a fact.
+
+**What changed.**
+
+- `docs/architecture.md` (now v2.2.0) — added **§6.1 Hypotheses**, specifying hypotheses as a fourth kind of content inside Hindsight (alongside memories, facts, and patterns), explicitly **not** a new layer, not a Logos responsibility, and not a reasoning engine. A hypothesis carries `statement`, `confidence`, `evidence` (with provenance), an optional `verification_plan`, and `status` across the `proposed → testing → confirmed | rejected` lifecycle; confirmed hypotheses promote into facts/patterns through the normal memory-policy path, and rejected ones are retained with their outcome rather than deleted. §4.4 (Hindsight) was updated to name hypotheses among what it holds. §7's Hindsight contract list gained `propose_hypothesis`, `update_hypothesis`, `resolve_hypothesis`, `query_hypotheses`. §8 (provenance & user control) was updated so the memory view always surfaces a hypothesis's confidence and status distinctly from confirmed content — never displayed indistinguishably from settled understanding. §14 gained an explicit enforcement rule: a hypothesis is never presented as a fact, anywhere — to Logos, in a response, or in the memory view. §15 records the v2.2.0 row.
+- `docs/vision.md` — the Hindsight row of the layer-responsibility table now names hypotheses alongside reflection and pattern formation.
+- `docs/roadmap.md` — added hypotheses to V2's Should Have, alongside pattern formation, since the two land at the same relationship phase (Middle — Gaia moving from remembering to understanding).
+
+**Why this matters.** The credit for this idea belongs to a genuine architectural insight from Stash's design, not to adopting Stash itself — the instruction was explicit that Gaia should take the *concept* (a testable, confidence-bearing knowledge object with a lifecycle), not treat "Gaia implements Stash" as the goal, and nothing here creates a dependency on that project or its code. What hypotheses give Gaia is a way to hold uncertainty honestly instead of collapsing it prematurely in either direction — discarding a real signal because it isn't yet proof, or treating a plausible-looking pattern as settled fact before it has earned that status. Keeping hypotheses inside Hindsight, not inside Logos, matters for the same reason the last two amendments mattered: a hypothesis is memory content with a lifecycle, not a reasoning operation, so it stays inspectable, editable, and forgettable exactly like everything else Hindsight holds (§8) — it does not become a second, less-visible place where understanding about the user accumulates.
+
+**What this does not change.** Facts, patterns, and reflections keep their existing meaning and contracts; hypotheses are additive, not a replacement for anything. Logos's boundary is unchanged — it still does not store anything; it reads what Hindsight gives it, now including confidence-tagged hypotheses alongside settled content, and reasons accordingly. SOUL's "never pretends certainty" was already a constraint on Gaia's language; this amendment gives Hindsight a structural way to help her honor it, rather than leaving it to reasoning-time discipline alone.
+
+---
+
 ## How to Read This Document
 
 Each milestone records:
