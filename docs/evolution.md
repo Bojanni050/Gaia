@@ -212,6 +212,25 @@ The next milestone introduces the first reflective layer: Hindsight. Gaia will b
 
 ---
 
+## Milestone 6 — Patterns & Hypotheses (`services/cognition`)
+
+**Goal.** Fill in the two Hindsight content types Milestone 5 left unimplemented: patterns and hypotheses (architecture.md §6.1). Build them ourselves, adapting the relevant design ideas from [Stash](https://github.com/alash3al/stash) — not depending on it, embedding it, or running it.
+
+**Why not just wire more of Hindsight's API.** Checked first, before writing anything: Hindsight's real API has no hypothesis or pattern objects, and — the more decisive finding — its `PATCH /memories/{id}` can't even change tags, only `text`/`state`/`entities`. That rules out faking a status lifecycle (`proposed → testing → confirmed/rejected`) on top of regular memory items; there'd be no way to move a hypothesis between states without deleting and re-retaining it, which is worse than just building the real thing.
+
+**What was built.**
+- `services/cognition` — a small new Express + Postgres service, Hindsight-adjacent but structurally separate (own database, own container). Two resources, both bank-scoped like Hindsight: **patterns** (`content`, `confidence`, `coherence_score`, `source_memory_ids` — plain CRUD, no lifecycle) and **hypotheses** (`statement`, `confidence`, `status`, `verification_plan`, `evidence_memory_ids`, full `proposed → testing → confirmed | rejected` lifecycle with transition validation, adapted from Stash's `internal/brain/hypothesis.go` state machine).
+- **Confirming a hypothesis retains it into Hindsight** as a real memory, tagged `confirmed-hypothesis` — the "promotes into a fact" step from architecture.md §6.1. Found along the way that Hindsight's `retain` endpoint never returns the created memory unit's ID, sync or async — confirmed against its own OpenAPI schema. Worked around it by setting our own `document_id` on the retain call and storing that (`confirmed_document_id`) instead of a memory ID we were never going to get; it's independently queryable via Hindsight's `/documents/{document_id}` endpoint. Verified end-to-end on the live services: propose → test → confirm landed a real, tagged document in Hindsight, `memory_unit_count: 1`.
+- `frontend/src/gaia/integration/memory/HindsightProvider.js` — `formPattern`/`queryPatterns` and the full hypothesis lifecycle (`proposeHypothesis`, `listHypotheses`, `updateHypothesis`, `testHypothesis`, `confirmHypothesis`, `rejectHypothesis`) now call the cognition service over a second base URL (`cognitionUrl`, defaulting to its Tailscale address), while everything else on the same provider still talks to Hindsight directly. One `MemoryProvider` seam, two backends behind it — the desktop still only knows about one contract. New `HypothesisTransitionError` surfaces the service's 409 on an invalid transition (e.g. trying to reject a confirmed hypothesis) without leaking HTTP status codes upward. `contracts/hindsight.js` gained the `Pattern`/`Hypothesis` typedefs and the full capability list.
+- Deployed to the VPS as `gaia-cognition` + `gaia-cognition-db`, both Tailscale-bound only from creation — no exposure-drift repeat of Milestone 5's finding.
+- 16 backend tests (`node --test`, no live Postgres — a hand-rolled fake pool asserting on the actual SQL text) plus 12 new frontend provider tests (28 total in `HindsightProvider.test.js`; 63 across the whole frontend suite).
+
+**What deliberately did not get built.** Stash's hypothesis system includes an LLM-driven consolidation stage that automatically compares new facts against every open hypothesis and auto-confirms/rejects past a confidence threshold. That's a real design decision about *who reasons about evidence* — Logos's job, per architecture.md's boundary rules, not something to bolt into a storage sidecar. This service exposes the lifecycle endpoints; nothing calls `test`/`confirm`/`reject` automatically. Pattern *formation* (clustering facts into an abstraction) is the same story — this service persists whatever pattern content it's handed, it doesn't synthesize it.
+
+**What this does not change.** Hindsight remains the canonical store for memories and facts; this service only tracks confidence and lifecycle state that references Hindsight content (`source_memory_ids`, `evidence_memory_ids`) without duplicating it. `forget()`'s existing gap (soft-invalidate, not a hard delete) is unrelated and unchanged by this milestone.
+
+---
+
 ## Amendment — Identity: Attunement vs. Mimicry
 
 **Context.** Gaia was built and refined for a single user first. As the long-term intent to make Gaia available beyond that first relationship became explicit, a latent risk in the personality model surfaced: `personality.md` described Gaia's voice as adaptive — "her phrasing, framing, and register shift toward theirs." For one user, that reads as attentiveness. Generalized to many users, it is the exact mechanism by which Gaia would start to sound like whoever she's talking to, and lose the one thing SOUL exists to guarantee — that she is recognizably herself to everyone, always.

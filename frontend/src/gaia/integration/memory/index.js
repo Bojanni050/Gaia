@@ -6,7 +6,7 @@
  */
 import { HindsightProvider } from './HindsightProvider';
 import { MemoryProvider } from './MemoryProvider';
-import { MemoryUnavailableError, MemoryNotFoundError } from './errors';
+import { MemoryUnavailableError, MemoryNotFoundError, HypothesisTransitionError } from './errors';
 
 let _provider = null;
 
@@ -29,4 +29,5 @@ export {
   HindsightProvider,
   MemoryUnavailableError,
   MemoryNotFoundError,
+  HypothesisTransitionError,
 };

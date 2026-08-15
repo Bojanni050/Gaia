@@ -78,4 +78,77 @@ export class MemoryProvider {
   async forget(memoryId, options = {}) {
     throw new Error('MemoryProvider.forget must be implemented');
   }
+
+  /**
+   * Store a pattern — content Logos has already synthesized from recurring
+   * facts. This just persists it; forming the abstraction is Logos's job.
+   * @param {{ content: string, confidence?: number, coherenceScore?: number, sourceMemoryIds?: string[] }} pattern
+   * @returns {Promise<import('../../../contracts/hindsight').Pattern>}
+   */
+  // eslint-disable-next-line no-unused-vars, require-await
+  async formPattern(pattern) {
+    throw new Error('MemoryProvider.formPattern must be implemented');
+  }
+
+  /**
+   * @returns {Promise<import('../../../contracts/hindsight').Pattern[]>}
+   */
+  // eslint-disable-next-line require-await
+  async queryPatterns() {
+    throw new Error('MemoryProvider.queryPatterns must be implemented');
+  }
+
+  /**
+   * Propose a hypothesis — held with explicit confidence, not yet earned as
+   * fact (architecture.md §6.1). Starts in status 'proposed'.
+   * @param {{ statement: string, confidence?: number, verificationPlan?: string, evidenceMemoryIds?: string[] }} hypothesis
+   * @returns {Promise<import('../../../contracts/hindsight').Hypothesis>}
+   */
+  // eslint-disable-next-line no-unused-vars, require-await
+  async proposeHypothesis(hypothesis) {
+    throw new Error('MemoryProvider.proposeHypothesis must be implemented');
+  }
+
+  /**
+   * @param {import('../../../contracts/hindsight').HypothesisStatus} [status]
+   * @returns {Promise<import('../../../contracts/hindsight').Hypothesis[]>}
+   */
+  // eslint-disable-next-line no-unused-vars, require-await
+  async listHypotheses(status) {
+    throw new Error('MemoryProvider.listHypotheses must be implemented');
+  }
+
+  /**
+   * Update statement/confidence/verification_plan/evidence. Refines a
+   * 'testing' hypothesis back to 'proposed' — cannot edit a confirmed or
+   * rejected one.
+   * @param {string} hypothesisId
+   * @param {{ statement?: string, confidence?: number, verificationPlan?: string, evidenceMemoryIds?: string[] }} patch
+   * @returns {Promise<import('../../../contracts/hindsight').Hypothesis>}
+   */
+  // eslint-disable-next-line no-unused-vars, require-await
+  async updateHypothesis(hypothesisId, patch) {
+    throw new Error('MemoryProvider.updateHypothesis must be implemented');
+  }
+
+  /** 'proposed' -> 'testing'. @param {string} hypothesisId */
+  // eslint-disable-next-line no-unused-vars, require-await
+  async testHypothesis(hypothesisId) {
+    throw new Error('MemoryProvider.testHypothesis must be implemented');
+  }
+
+  /** Confirms and promotes the hypothesis into a real Hindsight memory. @param {string} hypothesisId */
+  // eslint-disable-next-line no-unused-vars, require-await
+  async confirmHypothesis(hypothesisId) {
+    throw new Error('MemoryProvider.confirmHypothesis must be implemented');
+  }
+
+  /**
+   * @param {string} hypothesisId
+   * @param {string} [reason]
+   */
+  // eslint-disable-next-line no-unused-vars, require-await
+  async rejectHypothesis(hypothesisId, reason) {
+    throw new Error('MemoryProvider.rejectHypothesis must be implemented');
+  }
 }

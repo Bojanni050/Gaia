@@ -1,5 +1,5 @@
 import { MemoryProvider } from './MemoryProvider';
-import { MemoryUnavailableError, MemoryNotFoundError } from './errors';
+import { MemoryUnavailableError, MemoryNotFoundError, HypothesisTransitionError } from './errors';
 
 /**
  * HindsightProvider — Gaia's own connection to her Hindsight instance.
@@ -25,6 +25,11 @@ export class HindsightProvider extends MemoryProvider {
       .replace(/\/+$/, '');
     this.bankId = config.bankId || process.env.REACT_APP_HINDSIGHT_BANK_ID || 'gaia';
     this.apiKey = config.apiKey || process.env.REACT_APP_HINDSIGHT_API_KEY || '';
+    // Patterns and hypotheses (architecture.md §6.1) have nowhere to live in
+    // Hindsight's own API — this is Gaia's own cognition service (see
+    // services/cognition), Hindsight-adjacent, not Hindsight itself.
+    this.cognitionUrl = (config.cognitionUrl || process.env.REACT_APP_COGNITION_URL || 'http://100.64.144.93:8890')
+      .replace(/\/+$/, '');
   }
 
   _headers() {
@@ -35,6 +40,10 @@ export class HindsightProvider extends MemoryProvider {
 
   _bankUrl(path = '') {
     return `${this.baseUrl}/v1/default/banks/${this.bankId}${path}`;
+  }
+
+  _cognitionUrl(path = '') {
+    return `${this.cognitionUrl}/v1/banks/${this.bankId}${path}`;
   }
 
   async health() {
@@ -192,5 +201,93 @@ export class HindsightProvider extends MemoryProvider {
 
     if (res.status === 404) throw new MemoryNotFoundError(memoryId);
     if (!res.ok) throw new MemoryUnavailableError(`forget ${res.status}`);
+  }
+
+  // --- Patterns & hypotheses (services/cognition) -------------------------
+
+  async _cognitionRequest(path, { method = 'GET', body } = {}) {
+    let res;
+    try {
+      res = await fetch(this._cognitionUrl(path), {
+        method,
+        headers: this._headers(),
+        body: body !== undefined ? JSON.stringify(body) : undefined,
+      });
+    } catch (_) {
+      throw new MemoryUnavailableError();
+    }
+
+    if (res.status === 404) throw new MemoryNotFoundError(path);
+    if (res.status === 409) {
+      const detail = await res.json().catch(() => ({}));
+      throw new HypothesisTransitionError(detail.error);
+    }
+    if (!res.ok) {
+      const detail = await res.json().catch(() => ({}));
+      throw new MemoryUnavailableError(detail.error || `cognition ${res.status}`);
+    }
+    if (res.status === 204) return null;
+    return res.json();
+  }
+
+  /** @param {{ content: string, confidence?: number, coherenceScore?: number, sourceMemoryIds?: string[] }} pattern */
+  async formPattern(pattern) {
+    return this._cognitionRequest('/patterns', {
+      method: 'POST',
+      body: {
+        content: pattern.content,
+        confidence: pattern.confidence,
+        coherence_score: pattern.coherenceScore,
+        source_memory_ids: pattern.sourceMemoryIds,
+      },
+    });
+  }
+
+  async queryPatterns() {
+    const data = await this._cognitionRequest('/patterns');
+    return data.patterns;
+  }
+
+  /** @param {{ statement: string, confidence?: number, verificationPlan?: string, evidenceMemoryIds?: string[] }} hypothesis */
+  async proposeHypothesis(hypothesis) {
+    return this._cognitionRequest('/hypotheses', {
+      method: 'POST',
+      body: {
+        statement: hypothesis.statement,
+        confidence: hypothesis.confidence,
+        verification_plan: hypothesis.verificationPlan,
+        evidence_memory_ids: hypothesis.evidenceMemoryIds,
+      },
+    });
+  }
+
+  async listHypotheses(status) {
+    const query = status ? `?status=${encodeURIComponent(status)}` : '';
+    const data = await this._cognitionRequest(`/hypotheses${query}`);
+    return data.hypotheses;
+  }
+
+  async updateHypothesis(hypothesisId, patch = {}) {
+    return this._cognitionRequest(`/hypotheses/${hypothesisId}`, {
+      method: 'PATCH',
+      body: {
+        statement: patch.statement,
+        confidence: patch.confidence,
+        verification_plan: patch.verificationPlan,
+        evidence_memory_ids: patch.evidenceMemoryIds,
+      },
+    });
+  }
+
+  async testHypothesis(hypothesisId) {
+    return this._cognitionRequest(`/hypotheses/${hypothesisId}/test`, { method: 'POST' });
+  }
+
+  async confirmHypothesis(hypothesisId) {
+    return this._cognitionRequest(`/hypotheses/${hypothesisId}/confirm`, { method: 'POST' });
+  }
+
+  async rejectHypothesis(hypothesisId, reason) {
+    return this._cognitionRequest(`/hypotheses/${hypothesisId}/reject`, { method: 'POST', body: { reason } });
   }
 }

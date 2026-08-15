@@ -9,7 +9,7 @@
  * @jest-environment node
  */
 import { HindsightProvider } from '../HindsightProvider';
-import { MemoryUnavailableError, MemoryNotFoundError } from '../errors';
+import { MemoryUnavailableError, MemoryNotFoundError, HypothesisTransitionError } from '../errors';
 
 function jsonResponse(obj, status = 200) {
   return {
@@ -17,6 +17,10 @@ function jsonResponse(obj, status = 200) {
     status,
     json: async () => obj,
   };
+}
+
+function noBodyResponse(status) {
+  return { ok: status >= 200 && status < 300, status, json: async () => ({}) };
 }
 
 describe('HindsightProvider', () => {
@@ -36,13 +40,17 @@ describe('HindsightProvider', () => {
       expect(p.baseUrl).toBe('http://100.64.144.93:8888');
       expect(p.bankId).toBe('gaia');
       expect(p.apiKey).toBe('');
+      expect(p.cognitionUrl).toBe('http://100.64.144.93:8890');
     });
 
     test('honors explicit configuration', () => {
-      const p = new HindsightProvider({ baseUrl: 'http://h:8888/', bankId: 'test-bank', apiKey: 'sk-x' });
+      const p = new HindsightProvider({
+        baseUrl: 'http://h:8888/', bankId: 'test-bank', apiKey: 'sk-x', cognitionUrl: 'http://c:8890/',
+      });
       expect(p.baseUrl).toBe('http://h:8888');
       expect(p.bankId).toBe('test-bank');
       expect(p.apiKey).toBe('sk-x');
+      expect(p.cognitionUrl).toBe('http://c:8890');
     });
 
     test('emits Authorization header when apiKey is set', async () => {
@@ -231,6 +239,102 @@ describe('HindsightProvider', () => {
       global.fetch = jest.fn(async () => { throw new Error('down'); });
       const p = new HindsightProvider({ baseUrl: 'http://h:8888' });
       await expect(p.forget('mem-1')).rejects.toBeInstanceOf(MemoryUnavailableError);
+    });
+  });
+
+  describe('patterns (cognition service)', () => {
+    test('formPattern() posts to the cognition service, not Hindsight', async () => {
+      let captured;
+      global.fetch = jest.fn(async (url, init) => {
+        captured = { url, body: JSON.parse(init.body) };
+        return jsonResponse({ id: 'p1', content: 'x' });
+      });
+      const p = new HindsightProvider({ cognitionUrl: 'http://c:8890', bankId: 'gaia' });
+
+      const pattern = await p.formPattern({ content: 'Bo works late', confidence: 0.6, sourceMemoryIds: ['m1'] });
+
+      expect(captured.url).toBe('http://c:8890/v1/banks/gaia/patterns');
+      expect(captured.body).toEqual({
+        content: 'Bo works late', confidence: 0.6, coherence_score: undefined, source_memory_ids: ['m1'],
+      });
+      expect(pattern).toEqual({ id: 'p1', content: 'x' });
+    });
+
+    test('queryPatterns() unwraps the patterns array', async () => {
+      global.fetch = jest.fn(async () => jsonResponse({ patterns: [{ id: 'p1' }] }));
+      const p = new HindsightProvider({ cognitionUrl: 'http://c:8890' });
+      expect(await p.queryPatterns()).toEqual([{ id: 'p1' }]);
+    });
+  });
+
+  describe('hypotheses (cognition service)', () => {
+    test('proposeHypothesis() posts the statement and starts proposed', async () => {
+      let captured;
+      global.fetch = jest.fn(async (url, init) => {
+        captured = { url, body: JSON.parse(init.body) };
+        return jsonResponse({ id: 'h1', status: 'proposed' });
+      });
+      const p = new HindsightProvider({ cognitionUrl: 'http://c:8890', bankId: 'gaia' });
+
+      const h = await p.proposeHypothesis({ statement: 'Bo prefers dark mode', confidence: 0.7 });
+
+      expect(captured.url).toBe('http://c:8890/v1/banks/gaia/hypotheses');
+      expect(captured.body.statement).toBe('Bo prefers dark mode');
+      expect(h.status).toBe('proposed');
+    });
+
+    test('listHypotheses() filters by status when given', async () => {
+      let captured;
+      global.fetch = jest.fn(async (url) => {
+        captured = url;
+        return jsonResponse({ hypotheses: [] });
+      });
+      const p = new HindsightProvider({ cognitionUrl: 'http://c:8890', bankId: 'gaia' });
+      await p.listHypotheses('testing');
+      expect(captured).toBe('http://c:8890/v1/banks/gaia/hypotheses?status=testing');
+    });
+
+    test('testHypothesis() / confirmHypothesis() / rejectHypothesis() hit the right lifecycle endpoints', async () => {
+      const urls = [];
+      global.fetch = jest.fn(async (url) => {
+        urls.push(url);
+        return jsonResponse({ id: 'h1' });
+      });
+      const p = new HindsightProvider({ cognitionUrl: 'http://c:8890', bankId: 'gaia' });
+
+      await p.testHypothesis('h1');
+      await p.confirmHypothesis('h1');
+      await p.rejectHypothesis('h1', 'no evidence');
+
+      expect(urls).toEqual([
+        'http://c:8890/v1/banks/gaia/hypotheses/h1/test',
+        'http://c:8890/v1/banks/gaia/hypotheses/h1/confirm',
+        'http://c:8890/v1/banks/gaia/hypotheses/h1/reject',
+      ]);
+    });
+
+    test('throws HypothesisTransitionError on a 409 conflict', async () => {
+      global.fetch = jest.fn(async () => jsonResponse({ error: 'invalid status transition: confirmed -> rejected' }, 409));
+      const p = new HindsightProvider({ cognitionUrl: 'http://c:8890' });
+      await expect(p.rejectHypothesis('h1')).rejects.toBeInstanceOf(HypothesisTransitionError);
+    });
+
+    test('throws MemoryNotFoundError on a 404', async () => {
+      global.fetch = jest.fn(async () => noBodyResponse(404));
+      const p = new HindsightProvider({ cognitionUrl: 'http://c:8890' });
+      await expect(p.testHypothesis('missing')).rejects.toBeInstanceOf(MemoryNotFoundError);
+    });
+
+    test('resolves null for a 204 (delete)', async () => {
+      global.fetch = jest.fn(async () => noBodyResponse(204));
+      const p = new HindsightProvider({ cognitionUrl: 'http://c:8890' });
+      expect(await p._cognitionRequest('/hypotheses/h1', { method: 'DELETE' })).toBeNull();
+    });
+
+    test('throws MemoryUnavailableError on network failure', async () => {
+      global.fetch = jest.fn(async () => { throw new Error('down'); });
+      const p = new HindsightProvider({ cognitionUrl: 'http://c:8890' });
+      await expect(p.proposeHypothesis({ statement: 'x' })).rejects.toBeInstanceOf(MemoryUnavailableError);
     });
   });
 });

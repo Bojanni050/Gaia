@@ -16,3 +16,10 @@ export class MemoryNotFoundError extends Error {
     this.name = 'MemoryNotFoundError';
   }
 }
+
+export class HypothesisTransitionError extends Error {
+  constructor(detail) {
+    super(detail || 'invalid hypothesis status transition');
+    this.name = 'HypothesisTransitionError';
+  }
+}
