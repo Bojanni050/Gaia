@@ -1,7 +1,7 @@
 ---
 title: Gaia — Architecture
 document: architecture
-version: 2.0.0
+version: 2.1.0
 status: foundation
 last_updated: 2026-08-15
 owner: Gaia Product Foundation
@@ -14,6 +14,8 @@ framing: "Gaia is a lifelong personal intelligence designed to grow through unde
 >
 > Gaia is the agency. Logos is Gaia's cognitive reasoning layer. Capabilities are instruments Gaia may employ.
 >
+> Gaia herself lives in **Gaia Cloud**. Gaia Desktop — and every future client — is a **representation of Gaia, not an instance of her**.
+>
 > The architecture exists to let that understanding deepen over a lifetime **without collapsing the boundaries** between the systems that make Gaia who she is.
 
 ---
@@ -22,39 +24,54 @@ framing: "Gaia is a lifelong personal intelligence designed to grow through unde
 
 ```
 
-                    ┌─────────────────────────────────────┐
-                    │              GAIA                    │
-                    │   (agency + orchestrator)            │
-                    │                                      │
-                    │   ┌───────────────────────────────┐  │
-                    │   │           LOGOS               │  │
-                    │   │   (cognitive reasoning layer) │  │
-                    │   │                               │  │
-                    │   │   ┌───────────┐ ┌───────────┐ │  │
-                    │   │   │ intentIQ  │ │ reasonIQ  │ │  │
-                    │   │   │  what     │  what does  │ │  │
-                    │   │   │  does the │  this mean  │ │  │
-                    │   │   │  user     │  and what   │ │  │
-                    │   │   │  want?    │  follows?   │ │  │
-                    │   │   └───────────┘ └───────────┘ │  │
-                    │   └───────────────────────────────┘  │
-                    │                                      │
-                    │   Memory / Context                   │
-                    │   Goals / State                      │
-                    │   Decision                           │
-                    │   Orchestration                      │
-                    │                                      │
-                    │   ┌───────────────────────────────┐  │
-                    │   │        CAPABILITIES           │  │
-                    │   │   (optional instruments)      │  │
-                    │   │                               │  │
-                    │   │   Hermes · Melodiq ·          │  │
-                    │   │   SongCompanion · ...         │  │
-                    │   └───────────────────────────────┘  │
-                    └─────────────────────────────────────┘
+    ┌───────────────────────────────────────────────────────────┐
+    │                        GAIA CLOUD                          │
+    │                                                             │
+    │   ┌─────────────────────────────────────────────────────┐ │
+    │   │                     GAIA — AGENCY                    │ │
+    │   │                                                       │ │
+    │   │   ┌───────────────────────────────────────────────┐ │ │
+    │   │   │                    LOGOS                       │ │ │
+    │   │   │           (cognitive reasoning layer)          │ │ │
+    │   │   │                                                 │ │ │
+    │   │   │     ┌───────────┐         ┌───────────┐        │ │ │
+    │   │   │     │ intentIQ  │         │ reasonIQ  │        │ │ │
+    │   │   │     │  what     │         │ what does │        │ │ │
+    │   │   │     │  does the │         │ this mean │        │ │ │
+    │   │   │     │  user     │         │ and what  │        │ │ │
+    │   │   │     │  want?    │         │ follows?  │        │ │ │
+    │   │   │     └───────────┘         └───────────┘        │ │ │
+    │   │   └───────────────────────────────────────────────┘ │ │
+    │   │                                                       │ │
+    │   │   Goals / State                                       │ │
+    │   │   Decision / Plan                                     │ │
+    │   │   Orchestration                                       │ │
+    │   │                                                       │ │
+    │   │   ┌───────────────────────────────────────────────┐ │ │
+    │   │   │                 CAPABILITIES                   │ │ │
+    │   │   │             (optional instruments)             │ │ │
+    │   │   │                                                 │ │ │
+    │   │   │        Hermes · Melodiq · SongCompanion · ...  │ │ │
+    │   │   └───────────────────────────────────────────────┘ │ │
+    │   └─────────────────────────────────────────────────────┘ │
+    │                                                             │
+    │   Hindsight (long-term memory)  ·  Chronicles (if/when it   │
+    │   exists)  ·  other durable services                        │
+    │                                                             │
+    └────────────────────────────┬────────────────────────────────┘
+                                  │
+                            secure Gaia API
+                                  │
+    ┌─────────────────────────────┴────────────────────────────────┐
+    │                        GAIA DESKTOP                            │
+    │                (a client — presence, not brain)                │
+    │                                                                 │
+    │        Conversation / voice interface · local UI state ·       │
+    │        permissions & consent · presence, continuity render     │
+    └─────────────────────────────────────────────────────────────┘
     ```
 
-**Gaia** is the agency — the entity that acts, decides, and maintains continuity.
+**Gaia** is the agency — the entity that acts, decides, and maintains continuity. Gaia **runs in Gaia Cloud**, not on the desktop.
 
 **Logos** is Gaia's cognitive reasoning layer — the place where Gaia interprets input and constructs meaning. Logos consists of:
 
@@ -63,7 +80,11 @@ framing: "Gaia is a lifelong personal intelligence designed to grow through unde
 
 **Capabilities** are instruments Gaia may employ — Hermes for reasoning, Melodiq for music, SongCompanion for song-related tasks, and others. No capability is necessary for Gaia's own cognition. Capabilities are tools Gaia reaches for when they serve her goals; they are not constituents of her identity.
 
+**Hindsight** — Gaia's long-term memory — lives in Gaia Cloud alongside her, not on any single client. It is not an optional capability: Gaia's continuity depends on it the way it depends on SOUL.
+
 **Feedback** is a first-class input in Gaia's cognitive loop — not an afterthought, not a side channel. Feedback flows into Logos, where it is interpreted and integrated into Gaia's ongoing understanding.
+
+**Gaia Desktop** is a **client of Gaia Cloud** — the local presence and interface through which a person reaches Gaia. It is not where Gaia thinks, decides, or remembers; see §2a.
 
 ---
 
@@ -130,6 +151,8 @@ Desktop, browser and mobile are delivery platforms.
 
 The platform should never define Gaia's identity.
 
+**Gaia is platform-independent. Clients are representations of Gaia, not instances of Gaia.**
+
 ---
 
 # Provider Independence
@@ -146,9 +169,21 @@ Never on specific products.
 
 ---
 
+# Deployment Topology: Gaia Cloud vs. Gaia Desktop
+
+Gaia herself — the agency, Logos, her capabilities, and Hindsight — **runs in Gaia Cloud**. This is not a future migration target; it is how Gaia is architected from V1. There is exactly one Gaia, and she lives in the cloud.
+
+**Gaia Desktop is a client.** It is the local presence and interface through which a person reaches Gaia — conversation surface, voice, local UI state, permissions, notifications. It talks to Gaia Cloud over a secure Gaia API. It does not host Logos, does not decide, does not hold canonical memory, and does not orchestrate capabilities. See §3 and §9.
+
+This split is what makes multi-client support structural rather than aspirational: a future mobile or web client needs to be a good presence/interface for Gaia — it does not need to re-implement Logos, intentIQ/reasonIQ, Hindsight, orchestration, identity, or the capability ecosystem, because none of that exists per-client. Talking to Gaia from a phone five minutes after talking to her on desktop is talking to the *same* Gaia — same state, same memory, same identity — not to a separate "Gaia Mobile."
+
+**Local observation/capture capabilities** (e.g. a future capability that observes local activity on a device) are explicitly **out of scope for this version of the architecture** and are not shown in the diagrams below. When such a capability is introduced, it is a local *capture* layer that reports observations to Gaia Cloud for Gaia to interpret — never a second, client-side intelligence that pre-interprets meaning on Gaia's behalf. That design question is deferred; nothing in this document should be read as deciding it.
+
+---
+
 ## 1. Guiding Architectural Principles
 
-1. **Frontend-centric desktop product.** Gaia is designed first as a desktop client. Depth and presence originate on the desktop.
+1. **Gaia lives in the cloud; the desktop is her first client.** Gaia Cloud hosts Gaia's agency, Logos, capabilities, and Hindsight. Gaia Desktop is designed first among clients — depth and presence originate there — but it is a representation of Gaia, not where she runs.
 
 2. **Gaia is the agency.** Gaia is not a shell around Hermes or any other capability. Gaia is the entity that acts, decides, and maintains continuity. Capabilities are instruments she may employ.
 
@@ -174,78 +209,86 @@ Never on specific products.
 
                         ┌───────────────────────────────────┐
                         │           GAIA DESKTOP              │
-                        │   (primary experience & shell)      │
+                        │     (client — presence, not brain)  │
                         │                                     │
                         │   Conversation-first UX             │
                         │   Presence, continuity, calm        │
                         └──────────────┬──────────────────────┘
-                                       │  every user turn
+                                       │  every user turn, via
+                                       │  the secure Gaia API
                                        ▼
-                        ┌───────────────────────────────────┐
-                        │              GAIA                  │
-                        │   (agency + orchestrator)          │
-                        │                                     │
-                        │   ┌─────────────────────────────┐  │
-                        │   │          LOGOS               │  │
-                        │   │  (cognitive reasoning layer) │  │
-                        │   │  ┌─────────┐ ┌───────────┐  │  │
-                        │   │  │intentIQ │ │ reasonIQ  │  │  │
-                        │   │  └─────────┘ └───────────┘  │  │
-                        │   └─────────────────────────────┘  │
-                        │                                     │
-                        │   Memory / Context                  │
-                        │   Goals / State                     │
-                        │   Decision                          │
-                        │   Orchestration                     │
-                        │                                     │
-                        │   ┌─────────────────────────────┐  │
-                        │   │       CAPABILITIES           │  │
-                        │   │   (optional instruments)     │  │
-                        │   └─────────────────────────────┘  │
-                        └───────────────────────────────────┘
-                                       │
-                                       │  when a capability is needed
-                                       ▼
-                        ┌───────────────────────────────────┐
-                        │        CAPABILITY ROUTER           │
-                        │   decides which capability to call │
-                        └───┬───────────┬───────────┬───────┘
-                            │           │           │
-                      reasoning     memory      actions
-                            ▼           ▼           ▼
-                   ┌────────────┐ ┌───────────┐ ┌────────┐
-                   │   HERMES   │ │ HINDSIGHT │ │  MCP   │
-                   │ reasoning  │ │ long-term │ │actions │
-                   │ capability │ │ memory    │ │ layer  │
-                   └────────────┘ └───────────┘ └────────┘
-                            ▲            ▲           ▲
-                            └────────────┴───────────┘
-                                       │  governed by
-                                 ┌──────────┐
-                                 │   SOUL   │
-                                 │ identity │
-                                 │ constit. │
-                                 └──────────┘
-    
-     Providers (interchangeable, never user-facing):
-          [ Provider A ]  [ Provider B ]  [ Provider C ] ── internal to capabilities only
+    ┌──────────────────────────────────────────────────────────────┐
+    │                          GAIA CLOUD                            │
+    │                                                                 │
+    │                        ┌───────────────────────────────────┐  │
+    │                        │              GAIA                  │  │
+    │                        │   (agency + orchestrator)          │  │
+    │                        │                                     │  │
+    │                        │   ┌─────────────────────────────┐  │  │
+    │                        │   │          LOGOS               │  │  │
+    │                        │   │  (cognitive reasoning layer) │  │  │
+    │                        │   │  ┌─────────┐ ┌───────────┐  │  │  │
+    │                        │   │  │intentIQ │ │ reasonIQ  │  │  │  │
+    │                        │   │  └─────────┘ └───────────┘  │  │  │
+    │                        │   └─────────────────────────────┘  │  │
+    │                        │                                     │  │
+    │                        │   Goals / State                     │  │
+    │                        │   Decision / Plan                   │  │
+    │                        │   Orchestration                     │  │
+    │                        │                                     │  │
+    │                        │   ┌─────────────────────────────┐  │  │
+    │                        │   │       CAPABILITIES           │  │  │
+    │                        │   │   (optional instruments)     │  │  │
+    │                        │   └─────────────────────────────┘  │  │
+    │                        └───────────────────────────────────┘  │
+    │                                       │                        │
+    │                                       │  when a capability is  │
+    │                                       │  needed                │
+    │                                       ▼                        │
+    │                        ┌───────────────────────────────────┐  │
+    │                        │        CAPABILITY ROUTER           │  │
+    │                        │   decides which capability to call │  │
+    │                        └───┬───────────┬───────────┬───────┘  │
+    │                            │           │           │           │
+    │                      reasoning     memory      actions         │
+    │                            ▼           ▼           ▼           │
+    │                   ┌────────────┐ ┌───────────┐ ┌────────┐     │
+    │                   │   HERMES   │ │ HINDSIGHT │ │  MCP   │     │
+    │                   │ reasoning  │ │ long-term │ │actions │     │
+    │                   │ capability │ │ memory    │ │ layer  │     │
+    │                   └────────────┘ └───────────┘ └────────┘     │
+    │                            ▲            ▲           ▲          │
+    │                            └────────────┴───────────┘          │
+    │                                       │  governed by            │
+    │                                 ┌──────────┐                    │
+    │                                 │   SOUL   │                    │
+    │                                 │ identity │                    │
+    │                                 │ constit. │                    │
+    │                                 └──────────┘                    │
+    │                                                                 │
+    │     Providers (interchangeable, never user-facing):             │
+    │          [ Provider A ]  [ Provider B ]  [ Provider C ]         │
+    │          ── internal to capabilities only, never cross          │
+    │             the Gaia API                                        │
+    └────────────────────────────────────────────────────────────────┘
     ```
 
-The user interacts with **Gaia Desktop**. Gaia Desktop hands every turn to **Gaia** (the agency). Gaia processes the turn through **Logos** (intentIQ + reasonIQ) to interpret meaning and construct understanding. Gaia then decides whether a capability is needed — Hermes for reasoning, Hindsight for memory, MCP for actions, or another capability. All capabilities are governed by identity (SOUL). Providers live entirely inside capabilities and are never exposed.
+The user interacts with **Gaia Desktop**, a client. Desktop hands every turn, over the secure Gaia API, to **Gaia** running in **Gaia Cloud**. Gaia processes the turn through **Logos** (intentIQ + reasonIQ) to interpret meaning and construct understanding. Gaia then decides whether a capability is needed — Hermes for reasoning, Hindsight for memory, MCP for actions, or another capability. All capabilities are governed by identity (SOUL). Providers live entirely inside capabilities and are never exposed — and, like everything else in Gaia Cloud, never cross the Gaia API to any client.
 
 ---
 
-## 3. Gaia Desktop — The Primary Experience Layer
+## 3. Gaia Desktop — The Primary Client
 
-Gaia Desktop is the product the user lives in. Its responsibilities:
+Gaia Desktop is the product the user lives in day to day — but it is a **client of Gaia Cloud**, not the seat of Gaia's intelligence. Its responsibilities:
 
 - **Own the conversational experience.** The conversation space is central, immediate, and calm.
-- **Present Gaia's continuity.** Voice, tone, presence, and relationship state are rendered here consistently across sessions.
+- **Present Gaia's continuity.** Voice, tone, presence, and relationship state are rendered here consistently across sessions — continuity that originates in Gaia Cloud, not on the device.
 - **Manage local session and interaction state.** Draft input, streaming render, scroll/attention state, and ephemeral UI state.
 - **Mediate permissions and intent.** When an action is needed, the desktop surfaces clear intent and explicit permission before MCP is invoked.
-- **Expose legible controls for understanding.** Memory provenance, editing, and steering controls (see §8) live here.
+- **Expose legible controls for understanding.** Memory provenance, editing, and steering controls (see §8) live here, reading from Hindsight in Gaia Cloud.
+- **Speak to Gaia Cloud over the Gaia API.** Every turn, every permission grant, and every rendered response crosses this one boundary.
 
-Gaia Desktop **does not**: perform reasoning, decide what to remember, hold the canonical long-term memory, or contain provider-specific logic. It is a client — a rich, careful one — not a brain.
+Gaia Desktop **does not**: perform reasoning, decide what to remember, hold the canonical long-term memory, host Logos, orchestrate capabilities, or contain provider-specific logic. It is a client — a rich, careful one, and the first one built — not a brain. Being "primary" describes where depth and presence are designed first (§1.1), not where Gaia runs.
 
 ---
 
@@ -269,17 +312,17 @@ Gaia Desktop **does not**: perform reasoning, decide what to remember, hold the 
 
 ### 4.3 Gaia — Agency + Orchestrator
 
-- **Owns:** Decision-making, goal management, state continuity, and orchestration of capabilities.
-- **Provides:** The central agency that receives input from Logos, decides on goals and plans, and orchestrates capabilities when they serve those goals.
-- **Never:** Delegates identity (SOUL), memory (Hindsight), or reasoning (Logos) to capabilities. Gaia uses capabilities; she is not constituted by them.
-- **Boundary rule:** Capabilities are instruments Gaia may employ — never assumed to be the answer to every turn.
+- **Owns:** Decision-making, goal management, state continuity, and orchestration of capabilities. Runs in **Gaia Cloud**.
+- **Provides:** The central agency that receives input from Logos, decides on goals and plans, and orchestrates capabilities when they serve those goals. Exposes the secure **Gaia API** that every client (Gaia Desktop, and future clients) speaks to.
+- **Never:** Delegates identity (SOUL), memory (Hindsight), or reasoning (Logos) to capabilities — or to a client. Gaia uses capabilities; she is not constituted by them. Gaia does not run partially on a client; a client never holds a shadow copy of her state.
+- **Boundary rule:** Capabilities are instruments Gaia may employ — never assumed to be the answer to every turn. Clients are representations of Gaia, never instances of her (see "Deployment Topology" above).
 
 ### 4.4 Hindsight — Long-Term Memory
 
-- **Owns:** Reflective, pattern-based long-term memory across defined memory domains.
+- **Owns:** Reflective, pattern-based long-term memory across defined memory domains. Runs in **Gaia Cloud**, alongside Gaia — not cached or duplicated on any client.
 - **Provides:** Capability contracts for storing reflections, retrieving relevant context, forming and querying patterns, and enforcing memory policies. These contracts may be called by Gaia directly or by other capabilities when context is needed.
-- **Never:** Reasons, decides identity, or exposes storage internals.
-- **Boundary rule:** Gaia depends on Hindsight *contracts*, not its database. Storage is fully swappable (see §7).
+- **Never:** Reasons, decides identity, or exposes storage internals. Never becomes a per-client cache of "what this device remembers" — there is one Hindsight, shared by every client of the same Gaia.
+- **Boundary rule:** Gaia depends on Hindsight *contracts*, not its database. Storage is fully swappable (see §7). Hindsight is not an optional capability — it is as load-bearing for Gaia's continuity as SOUL is for her identity.
 
 ### 4.5 Hermes — Reasoning Capability
 
@@ -309,9 +352,9 @@ Gaia Desktop **does not**: perform reasoning, decide what to remember, hold the 
 - **Never:** Decides autonomously what matters, or acts without explicit permission and clear intent.
 - **Boundary rule:** Operational complexity is hidden from the user; actions are surfaced as intent + permission, not as tool chains.
 
-### 4.9 Gaia Desktop — Experience
+### 4.9 Gaia Desktop — Experience (Client)
 
-- See §3. Owns experience and mediation; owns no canonical reasoning, memory, identity, or orchestration logic. It defers every decision to Gaia.
+- See §3. A client of Gaia Cloud, reached over the Gaia API. Owns experience and mediation; owns no canonical reasoning, memory, identity, or orchestration logic — none of that runs on the device. It defers every decision to Gaia, in the cloud.
 
 ---
 
@@ -322,7 +365,8 @@ Gaia Desktop **does not**: perform reasoning, decide what to remember, hold the 
 ```
 
 1. User types/speaks in Gaia Desktop.
-2. Desktop sends the turn + session context + granted permissions to Gaia.
+2. Desktop sends the turn + session context + granted permissions to Gaia, over the
+secure Gaia API, into Gaia Cloud.
 3. Gaia processes the turn through Logos:
 a. intentIQ interprets what the user is trying to achieve.
 b. reasonIQ determines what this means and what conclusions follow.
@@ -353,12 +397,13 @@ for the next turn.
 
 ### 5.2 Direction of dependency
 
-- Gaia Desktop → depends on → Gaia (only).
-- Gaia → depends on → SOUL (governing identity), Logos (reasoning), and routes to capabilities (Hindsight, Hermes, Melodiq, SongCompanion, MCP) via contracts.
+- Gaia Desktop (client, local) → depends on → Gaia (only), across the Gaia API, into Gaia Cloud.
+- Gaia → depends on → SOUL (governing identity), Logos (reasoning), and routes to capabilities (Hindsight, Hermes, Melodiq, SongCompanion, MCP) via contracts. All of this lives in Gaia Cloud.
 - Logos → depends on → SOUL (governing identity).
 - Capabilities → depend on → SOUL, Hindsight (when context is needed), and other capabilities (when their task requires them).
 - No adjacent leaf system depends on another leaf system directly; Gaia orchestrates, and capabilities orchestrate only what their own task needs.
 - Providers are a private dependency of individual capabilities.
+- **No dependency crosses the Gaia API except the client → Gaia turn/response traffic itself.** A client never depends on Logos, Hindsight, or a capability directly — only Gaia does, and only Gaia is reachable from outside Gaia Cloud.
 
 ---
 
@@ -398,22 +443,24 @@ Storage is deliberately **not** specified at the foundation level.
 
 ---
 
-## 9. When a Separate Backend Is Justified (Stance)
+## 9. Gaia Cloud Is the Runtime, Not a Speculative Backend (Stance)
 
-> **Open question resolved:** *At what point would synchronization or policy concerns justify a separate backend beyond Gaia's orchestration?*
-> **Stance: Default to a desktop client with Gaia's orchestration. Introduce a new backend layer only when one of these proven needs appears:**
+> **Open question resolved (revised):** *At what point would synchronization or policy concerns justify a separate backend beyond a desktop client?*
+> **Stance: Gaia Cloud is the proven need, not a speculative one. Gaia's agency, Logos, capabilities, and Hindsight run there from V1. What remains speculative — and stays deferred until proven — is any *additional* infrastructure beyond that single Gaia Cloud runtime.**
 
-A new backend service is justified **only** when a concern genuinely cannot be owned by Gaia or the capabilities she orchestrates:
+Earlier drafts of this document defaulted to "Gaia is a desktop client; avoid backends until proven necessary." That framing no longer holds, because the proof arrived immediately: Gaia's continuity, identity, and memory are only "sacred" (per vision.md) if they persist independent of any single device — and a purely client-side Gaia cannot do that. The moment a second client (mobile, web) is a real possibility, per-client orchestration would mean re-deriving Gaia's state per device, which is the boundary collapse this architecture exists to prevent. Gaia Cloud is therefore foundational, not a milestone to earn.
 
-1. **Cross-client synchronization boundaries** — coordinating state across multiple simultaneous clients where the desktop client cannot be the source of truth.
-2. **Offline reconciliation** — merging divergent local changes made while offline (see §11).
-3. **Security isolation** — isolating secrets, keys, or sensitive policy enforcement away from the reasoning path.
+**What this does *not* license:** treating every future infrastructure idea as similarly self-justifying. Beyond the single Gaia Cloud runtime described in §2, additional backend infrastructure is justified **only** when a concern genuinely cannot be owned by that runtime:
+
+1. **Regional/latency isolation** — serving Gaia Cloud from multiple regions where a single deployment cannot meet latency needs.
+2. **Offline reconciliation** — merging divergent local changes made by a client while disconnected (see §11).
+3. **Security isolation** — isolating secrets, keys, or sensitive policy enforcement into a dedicated boundary away from the reasoning path.
 4. **Dedicated policy enforcement** outside the capability layer — where policy must be authoritative independent of capabilities.
-5. **Multi-device state coordination** — canonical device/session state that should not live in any single desktop client.
+5. **Independent scaling of a specific capability** — e.g. Hermes needing to scale separately from Melodiq under real load.
 
-Until one of these is *proven* (not anticipated), Gaia remains a desktop client. **Speculative backends are prohibited.**
+Until one of these is *proven* (not anticipated), Gaia Cloud remains a single coherent runtime as described in §2. **Speculative infrastructure beyond that baseline is prohibited.**
 
-**Gaia's orchestration is not a "separate backend."** It is a decision layer that lives with Gaia Desktop (client-side), not a new network service. Adding it does not trigger this stance — it is Gaia deciding, on her own side of the wire, which of her capabilities a turn should reach. It only becomes a §9 question if a proven need later requires the orchestration decision to be made somewhere the desktop client cannot own (e.g. cross-device orchestration state).
+**Gaia's orchestration is Gaia Cloud's job, not a client's.** It is not "client-side" in any deployment — it runs in Gaia Cloud, reachable only through the Gaia API. A client (Gaia Desktop or otherwise) never hosts orchestration, even partially, even as a cache. This is the boundary that makes multi-client support (§13) structural rather than aspirational.
 
 ---
 
@@ -421,7 +468,7 @@ Until one of these is *proven* (not anticipated), Gaia remains a desktop client.
 
 ```
 
-OPEN     Desktop hands the turn to Gaia.
+OPEN     Desktop hands the turn to Gaia, over the Gaia API, into Gaia Cloud.
 LOGOS    Gaia processes through Logos (intentIQ + reasonIQ).
 DECIDE   Gaia decides on goals and plans.
 ROUTE    Gaia decides whether a capability is needed. If not, Gaia responds directly.
@@ -446,15 +493,15 @@ CLOSE    Connection closes; session continuity is preserved for the next turn.
 > **Open question resolved:** *Offline-first in early versions, or network-dependent initially?*
 > **Stance: Network-dependent initially, with an offline-graceful desktop shell; true offline-first is deferred to a later version.**
 
-- **V1:** Capabilities may require connectivity. The desktop shell degrades gracefully offline — it remains open, calm, and readable, clearly indicating that Gaia is momentarily unreachable rather than breaking.
-- **Later:** True offline-first (local reflection buffering + reconciliation) is a candidate that would justify an offline reconciliation backend (§9.2). It is intentionally out of scope early to keep V1 small and boundaries clean.
-- **Rationale:** Offline-first prematurely forces sync/reconciliation complexity that contradicts the "no speculative backend" principle. We add it when the need is real.
+- **V1:** Since Gaia herself runs in Gaia Cloud, every client requires connectivity to reach her — there is no local fallback intelligence. The desktop shell degrades gracefully offline — it remains open, calm, and readable, clearly indicating that Gaia is momentarily unreachable rather than breaking.
+- **Later:** True offline-first (local buffering of a client's pending input + reconciliation on reconnect) is a candidate that would justify the offline-reconciliation infrastructure named in §9, item 2. It is intentionally out of scope early to keep V1 small and boundaries clean.
+- **Rationale:** Offline-first prematurely forces sync/reconciliation complexity beyond the baseline Gaia Cloud runtime. We add it when the need is real, per §9.
 
 ---
 
 ## 12. Model-Agnostic Capability Design
 
-- **Single surface:** Gaia Desktop knows only Gaia. It has no concept of "a model," and no concept of any capability as special — capabilities are simply instruments Gaia may reach for when they serve her goals.
+- **Single surface:** Gaia Desktop knows only Gaia — reached over the Gaia API, in Gaia Cloud. It has no concept of "a model," and no concept of any capability as special — capabilities are simply instruments Gaia may reach for when they serve her goals.
 - **Internal routing:** Capabilities select among one or more providers using their own routing logic (capability, cost, latency, availability). This is invisible upstream — invisible to Gaia and to the user alike.
 - **Continuity contract:** Provider changes must not alter Gaia's identity, tone, or continuity. SOUL governs voice; Hindsight governs memory. Neither lives in the provider.
 - **No provider leakage:** Provider names, model versions, tool chains, and provider-specific UX concepts must never appear in Gaia Desktop or in Gaia's language.
@@ -464,10 +511,11 @@ CLOSE    Connection closes; session continuity is preserved for the next turn.
 
 ## 13. Extensibility to Future Interfaces Without Redesign
 
-- **Gaia is the shared contract.** Web, mobile, voice, wearable, and ambient surfaces are additional clients of the same Gaia — not of individual capabilities directly.
-- **Identity and memory are surface-independent.** Because SOUL, Hindsight, and Gaia sit behind every surface, each one inherits the same Gaia — same voice, same understanding, same orchestration.
-- **No architectural inversion.** New surfaces extend Gaia; they never push identity, memory, orchestration, or reasoning into the client. The desktop depth defines the character; other surfaces adapt presentation only.
-- **Rule:** If a new surface would require moving identity, memory, orchestration, or canonical reasoning into a client, the design is wrong.
+- **Gaia is the shared contract.** Web, mobile, voice, wearable, and ambient surfaces are additional **clients** of the same Gaia Cloud — not of individual capabilities directly, and not separate instances of Gaia.
+- **Clients are representations of Gaia, not instances of Gaia.** Because Gaia, Logos, SOUL, Hindsight, and her capabilities all live in Gaia Cloud, a new client needs to be a good presence and interface — nothing more. It does not re-implement reasoning, memory, identity, or orchestration; there is nothing client-specific to re-derive.
+- **Identity and memory are surface-independent.** Because SOUL, Logos, Hindsight, and Gaia's orchestration all live in Gaia Cloud behind every client, each surface inherits the same Gaia — same voice, same understanding, same state — mid-conversation, across devices, without handoff logic.
+- **No architectural inversion.** New clients extend Gaia; they never pull identity, memory, orchestration, or reasoning down into themselves. The desktop client's depth defines the character; other clients adapt presentation only.
+- **Rule:** If a new client would require moving identity, memory, orchestration, or canonical reasoning out of Gaia Cloud and into that client, the design is wrong.
 
 ---
 
@@ -483,6 +531,7 @@ To prevent silent boundary collapse over time:
 - **Providers are private.** No provider concept escapes its capability.
 - **No capability is the default.** Gaia must not hard-code any capability as the default path. Every turn is decided on its own merits; capabilities are reached for, not fallen back to.
 - **Feedback is first-class.** Feedback is not a side channel. It flows into Logos as a primary input for ongoing understanding.
+- **No client hosts Gaia.** Identity, cognition, memory, and orchestration run in Gaia Cloud only. A client (Gaia Desktop or any future one) that gains a local copy of any of these — even as a cache or a fallback — is a boundary violation, not an optimization.
 
 These rules are the architectural expression of Gaia's promise: she can grow through understanding indefinitely because the systems that make her *her* never dissolve into one another.
 
@@ -490,18 +539,20 @@ These rules are the architectural expression of Gaia's promise: she can grow thr
 
 ## 15. Key Distinctions from Previous Architecture
 
-This version (2.0.0) introduces several fundamental shifts from version 1.0.0:
+This version (2.1.0) refines version 2.0.0; 2.0.0 introduced fundamental shifts from version 1.0.0:
 
-| Concept | v1.0.0 | v2.0.0 |
-|---------|--------|--------|
-| **Central entity** | Intent Engine as routing layer | Gaia as agency + orchestrator |
-| **Reasoning layer** | Hermes as reasoning capability | Logos (intentIQ + reasonIQ) as Gaia's cognitive layer |
-| **Hermes** | Central reasoning capability | One capability among many (optional instrument) |
-| **New capabilities** | Not explicitly named | Melodiq, SongCompanion explicitly named as optional instruments |
-| **Feedback** | Implicit in memory policies | First-class input in Gaia's cognitive loop |
-| **Architecture diagram** | Intent Engine → capabilities | Gaia (with Logos) → capability router → capabilities |
+| Concept | v1.0.0 | v2.0.0 | v2.1.0 |
+|---------|--------|--------|--------|
+| **Central entity** | Intent Engine as routing layer | Gaia as agency + orchestrator | *(unchanged)* |
+| **Reasoning layer** | Hermes as reasoning capability | Logos (intentIQ + reasonIQ) as Gaia's cognitive layer | *(unchanged)* |
+| **Hermes** | Central reasoning capability | One capability among many (optional instrument) | *(unchanged)* |
+| **New capabilities** | Not explicitly named | Melodiq, SongCompanion explicitly named as optional instruments | *(unchanged)* |
+| **Feedback** | Implicit in memory policies | First-class input in Gaia's cognitive loop | *(unchanged)* |
+| **Where Gaia runs** | Implied client-side ("Gaia remains a desktop client") | Implied client-side | **Explicit: Gaia Cloud.** Gaia, Logos, Hindsight, and capabilities are named as cloud-hosted; Gaia Desktop is explicitly a client |
+| **Backend stance (§9)** | "No speculative backends"; client-side by default | Same stance carried forward | **Reversed:** Gaia Cloud is the proven baseline, not speculative; the "no speculative infrastructure" stance now applies only to infrastructure *beyond* that baseline |
+| **Multi-client story** | Not addressed | Not addressed | Structural: clients are representations of Gaia, never instances of her (§13, Deployment Topology) |
 
-The core insight: **Gaia is the agency. Logos is Gaia's cognitive reasoning layer. Capabilities are instruments Gaia may employ.**
+The core insight, extended: **Gaia is the agency. Logos is Gaia's cognitive reasoning layer. Capabilities are instruments Gaia may employ. Gaia herself lives in Gaia Cloud — every client, starting with Gaia Desktop, is a representation of her, not an instance of her.**
 
 ---
 
@@ -509,10 +560,11 @@ The core insight: **Gaia is the agency. Logos is Gaia's cognitive reasoning laye
 
 This architecture.md is now the foundation. The following documents should be reviewed and updated in this order:
 
-1. **orchestrator.md** — recontextualize IntentIQ and OrchestratorIQ under Logos (intentIQ + reasonIQ within Logos, not as Hermes-internal layers)
-2. **hermes/soul.md and Hermes documentation** — update to reflect Hermes as one capability among many
-3. **intentIQ / reasonIQ docs** — if they exist separately, align with Logos framing
-4. **capability documentation** (Melodiq, SongCompanion, etc.) — ensure each is framed as an optional instrument
-5. **overige capability-documentatie** — review against new architectural truth
+1. **orchestrator.md** — recontextualize IntentIQ and OrchestratorIQ under Logos (intentIQ + reasonIQ within Logos, not as Hermes-internal layers); already done for v2.0.0, re-check for cloud/client language.
+2. **README.md, vision.md, coding-standards.md, roadmap.md, soul.md** — update any remaining "desktop client owns orchestration" or "no speculative backend" language to match §9's revised stance.
+3. **hermes/soul.md and Hermes documentation** — update to reflect Hermes as one cloud-hosted capability among many.
+4. **intentIQ / reasonIQ docs** — if they exist separately, align with Logos framing.
+5. **capability documentation** (Melodiq, SongCompanion, etc.) — ensure each is framed as an optional, cloud-hosted instrument.
+6. **Local observation/capture capability** (deferred, see "Deployment Topology" above) — design separately when it is prioritized; do not retrofit it into this version's diagrams.
 
 Each document should be held against this new architecture.md as the single source of truth.

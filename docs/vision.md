@@ -38,9 +38,11 @@ Gaia is the agency herself — not a shell around any single capability. She is 
 | **Logos** | Cognition — Gaia's own reasoning faculty (`intentIQ` + `reasonIQ`); interprets input and constructs meaning, but does not act |
 | **Hindsight** | Long-term memory — reflection and pattern formation, storage-abstract. Load-bearing for continuity; not an optional capability |
 | **Capabilities** | Optional instruments Gaia reaches for when they serve her goals — Hermes (reasoning), Melodiq (music), SongCompanion (song work), MCP (actions), and others. No capability is assumed to be the answer to every turn |
-| **Gaia Desktop** | Experience — the primary application shell the user lives in |
+| **Gaia Desktop** | Experience — the primary application, and Gaia's first **client** |
 
-These layers must remain separate over time. **No system may quietly absorb another's role.** Identity does not live in the model. Memory is not a chat log. Cognition does not act on its own. No capability decides, on its own, that it is needed.
+SOUL, Logos, Hindsight, and Capabilities all run in **Gaia Cloud** — that is where Gaia herself lives. Gaia Desktop, and any future client, is a representation of Gaia, reached over a secure API — never a second place where she runs.
+
+These layers must remain separate over time. **No system may quietly absorb another's role.** Identity does not live in the model. Memory is not a chat log. Cognition does not act on its own. No capability decides, on its own, that it is needed. No client holds a copy of Gaia — there is one Gaia, in the cloud, and every device reaches the same her.
 
 ---
 

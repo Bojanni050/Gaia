@@ -280,6 +280,22 @@ The actual constitution — the "You are Gaia…" document with her character, c
 
 ---
 
+## Amendment — Gaia Cloud: Where Gaia Actually Runs
+
+**Context.** The two amendments above fixed *what decides* (Gaia, via Logos) but left an unstated assumption in place: that Gaia — her agency, Logos, orchestration, and Hindsight — runs on the desktop client, the same assumption every version of this document had carried since Milestone 2 ("Gaia Desktop knows only Hermes/Gaia," §9's old stance of "Gaia remains a desktop client"). That assumption stops being tenable the moment a second client (mobile, in particular) is a real near-term goal. A desktop-hosted Gaia would mean a mobile app either talks to the desktop machine (impractical) or re-implements Logos, Hindsight access, orchestration, and identity itself — which re-creates a second Gaia, not a second interface to the same one. The instruction that triggered this amendment named the shape directly: reasoning and intelligence belong in the cloud; the desktop app is Gaia's interface, communicating with that cloud; Hindsight lives there too; the desktop app is presence, not brain.
+
+**What changed.**
+
+- `docs/architecture.md` (now v2.1.0) — added an explicit **Deployment Topology** section naming **Gaia Cloud** as where Gaia, Logos, her capabilities, and Hindsight run, and **Gaia Desktop** as a client reaching Gaia over a secure **Gaia API**. The Core Architectural Model and System Overview diagrams (§2) were redrawn with a Gaia Cloud boundary wrapping Gaia/Logos/Capabilities/Hindsight, and Gaia Desktop outside it as a client box. §3 (Gaia Desktop) was retitled "The Primary Client" and rewritten to state plainly that it does not host Logos, memory, or orchestration. §4.3, §4.4, and §4.9 were updated to name Gaia Cloud as where Gaia and Hindsight run and to name Gaia Desktop as a client. §5's flow and dependency directions now cross the Gaia API explicitly. §9 was rewritten from "avoid backends until proven" to "Gaia Cloud is the proven baseline, not speculative — only *additional* infrastructure beyond it stays speculative." §11, §12, §13, and §14 were each updated for the same distinction; §13 in particular now states the core principle plainly: **clients are representations of Gaia, not instances of Gaia.** §15 gained a v2.1.0 column; §16 was updated with next steps for propagation.
+- `docs/README.md`, `docs/vision.md`, `docs/roadmap.md` — propagated the Gaia Cloud / client split: "Gaia Desktop" is now consistently described as a client, not an application that owns experience in isolation; "no speculative backend" language was corrected to "Gaia Cloud is the baseline, not speculative — only infrastructure beyond it is."
+- A local **Codex Capture** capability (observing on-device activity and reporting it to Gaia Cloud as raw observations, never as pre-interpreted meaning) was discussed and **deliberately deferred** — explicitly named as out of scope in `architecture.md`'s Deployment Topology section, and not reflected in any diagram, so this version of the architecture stays uncluttered. It will be designed as a local capture capability when prioritized, without pre-deciding its shape now.
+
+**Why this matters.** This is the change that makes "same Gaia on desktop and mobile" true by construction rather than by discipline. If Gaia's agency lived on a client, keeping her consistent across two clients would require active synchronization work and would always risk drifting into two Gaias. With Gaia in the cloud, a second client is, by default, talking to the same her — same state, same memory, same identity — because there is only one place any of that exists. It also resolves a tension the previous amendment left unaddressed: naming Gaia as "the agency" only fully means something once it's clear *where* that agency actually executes.
+
+**What this does not change.** SOUL, Logos, Hindsight, and the capability boundaries established in the previous two amendments are unchanged in substance — only their deployment location is now explicit. Hindsight remains not-optional, and its cloud placement reinforces rather than changes that: it is load-bearing infrastructure shared by every client of the same Gaia, not a per-device cache. No provider ever surfaces to any client. Gaia Desktop's UX priorities (§1.1: designed first, deepest presence) are unchanged — "first client" is not "less important," it is a statement about where depth of *design* originates, not where Gaia *runs*.
+
+---
+
 ## How to Read This Document
 
 Each milestone records:

@@ -29,16 +29,17 @@ This is the long-term foundation for Gaia. Every document reinforces the same pr
 
 ## Gaia's Structure
 
-- **Gaia** → the agency herself — acts, decides, maintains continuity.
+- **Gaia** → the agency herself — acts, decides, maintains continuity. **Runs in Gaia Cloud.**
 - **SOUL** → Identity  ·  **Logos** → Cognition (`intentIQ` + `reasonIQ`, Gaia's own reasoning faculty)  ·  **Hindsight** → Memory, load-bearing for continuity, never optional
-- **Capabilities** → optional instruments Gaia reaches for when they serve her goals — Hermes (reasoning), Melodiq (music), SongCompanion (song work), MCP (actions), and others  ·  **Gaia Desktop** → Experience
+- **Capabilities** → optional instruments Gaia reaches for when they serve her goals — Hermes (reasoning), Melodiq (music), SongCompanion (song work), MCP (actions), and others  ·  **Gaia Desktop** → Experience, and her first **client**
 
-These remain separate over time. No system absorbs another's role. No capability — Hermes included — is a default; Gaia decides, turn by turn, whether one is needed at all.
+These remain separate over time. No system absorbs another's role. No capability — Hermes included — is a default; Gaia decides, turn by turn, whether one is needed at all. No client — Gaia Desktop included — hosts Gaia; every client reaches her over the Gaia API. Clients are representations of Gaia, never instances of her.
 
 ## Resolved Open Questions (stances documented)
 
+- **Where does Gaia run?** → Gaia Cloud, from V1 — not a desktop-hosted brain (architecture §2, "Deployment Topology").
 - **Offline-first?** → Network-dependent initially with an offline-graceful shell (architecture §11).
 - **Memory provenance visibility?** → Always available on demand, never omnipresent (architecture §8, ui-principles §9).
 - **Proactivity level?** → Earned, tiered, reversible; ceiling is "never noisy" (personality §2, roadmap §8).
 - **Personality variability?** → Stable core, subtle contextual expression (personality §10).
-- **Separate backend trigger?** → Only on a proven need Gaia or her capabilities cannot own (architecture §9).
+- **Infrastructure beyond Gaia Cloud?** → Only on a proven need the baseline Gaia Cloud runtime cannot own (architecture §9).

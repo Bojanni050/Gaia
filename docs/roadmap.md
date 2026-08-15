@@ -21,7 +21,7 @@ framing: "Gaia is a lifelong personal intelligence designed to grow through unde
 - **Small, then deep.** Start with the smallest thing that is genuinely useful and calm. Expand depth before breadth.
 - **Trust is the pacing function.** New proactivity or memory capabilities ship only after trust supports them.
 - **Boundaries never regress.** No milestone collapses the separation between SOUL, Logos, Hindsight, Gaia's capabilities (Hermes among them), and Desktop.
-- **No speculative backends.** New backend layers appear only when a proven need arises (architecture §9).
+- **No speculative infrastructure beyond Gaia Cloud.** Gaia Cloud itself (Gaia, Logos, Hindsight, capabilities) is the proven baseline from V1 — not something to earn. Additional infrastructure beyond that single runtime appears only when a proven need arises (architecture §9).
 - **Metrics we ignore:** engagement minutes, message volume, feature count. **Metrics we watch:** relevance of recall, welcomeness of proactivity, felt continuity, user-described trust.
 
 ---
@@ -49,7 +49,7 @@ framing: "Gaia is a lifelong personal intelligence designed to grow through unde
 - Persistent Gaia identity governed by SOUL — consistent voice across sessions.
 - Basic Hindsight integration via memory contracts: reflection-based continuity across sessions (not raw logging).
 - Session continuity: reopening Gaia feels like resuming, not restarting.
-- Graceful offline behavior of the shell (network-dependent reasoning; see architecture §11).
+- Graceful offline behavior of the shell (Gaia runs in Gaia Cloud, so every client is network-dependent to reach her; see architecture §11).
 
 ### Should Have
 - Calm, opt-in memory view: see what Gaia has come to understand (read-only in V1 acceptable).
@@ -107,7 +107,7 @@ framing: "Gaia is a lifelong personal intelligence designed to grow through unde
 ### Must Have
 - Tiered, earned proactivity (personality §2): reminders, timing, perspective — always dismissible, always tunable.
 - MCP action layer generalized: external capabilities under explicit permission, operational complexity hidden.
-- Second surface (web or mobile) as an additional Hermes client — same Gaia, same memory, same voice.
+- Second client (web or mobile) as an additional representation of the same Gaia Cloud — same Gaia, same memory, same voice, no per-client re-implementation.
 
 ### Should Have
 - Attention/interruption management matured (tiered signals, flow-state respect).
@@ -115,7 +115,7 @@ framing: "Gaia is a lifelong personal intelligence designed to grow through unde
 
 ### Could Have
 - Voice surface.
-- Introduce a dedicated backend layer **only if** a proven need appears (sync, offline reconciliation, security isolation, policy enforcement, multi-device coordination — architecture §9).
+- Introduce infrastructure **beyond the baseline Gaia Cloud runtime** only if a proven need appears (offline reconciliation, security isolation, policy enforcement, independent capability scaling — architecture §9).
 
 ### Explicitly NOT in V3
 - Ambient/wearable surfaces (long-term).
@@ -146,7 +146,7 @@ framing: "Gaia is a lifelong personal intelligence designed to grow through unde
 - Memory view & controls · relevance-driven recall · Chronicles read/write · matured attention management · creative workflows.
 
 **Could Have:**
-- Early gentle suggestions · voice surface · dedicated backend (only if proven) · light personalization.
+- Early gentle suggestions · voice surface · infrastructure beyond baseline Gaia Cloud (only if proven) · light personalization.
 
 **Future:**
 - Ambient/wearable surfaces · true offline-first + reconciliation · optional multi-user · multi-decade continuity.
@@ -179,7 +179,7 @@ Each milestone pairs a **capability** with a **trust guardrail**. Capability shi
 | M5 | Gentle suggestions | Suggestions are dismissible and tunable; opt-out is instant |
 | M6 | MCP actions | Every action requires explicit permission + clear intent |
 | M7 | Proactive initiative | Initiative respects flow state; ceiling is "never noisy" |
-| M8 | Second surface | Identity/memory stay behind Hermes; no architectural inversion |
+| M8 | Second surface | Identity/memory stay in Gaia Cloud, behind the Gaia API; no architectural inversion |
 | M9 | Multi-year understanding | User remains fully in control of the accumulated model of them |
 
 **Rule for every milestone:** if delivering the capability would make the user feel watched, managed, or crowded, the milestone is not ready — regardless of technical readiness.
