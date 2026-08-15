@@ -11,6 +11,13 @@ of it either.
 Runs in Gaia Cloud, next to Hindsight — never client-side (architecture.md §9,
 "No client hosts Gaia").
 
+**This service only ever persists.** It never forms a hypothesis or pattern,
+judges evidence relevance, tests, confirms, rejects, or refines one, or
+revises a confidence score on its own initiative — every one of those
+judgments is Logos's, always (architecture.md §6.2, "Hindsight persists;
+Logos reasons"). Everything this service's HTTP API does is storage: take
+what Logos already decided, keep it, and hand it back on request.
+
 The `hypothesis` design (fields, status lifecycle, confirm-promotes-to-fact)
 is adapted from [Stash](https://github.com/alash3al/stash)'s `internal/brain`
 package — the *concept*, not the code or the binary. This service does not
@@ -26,8 +33,10 @@ lifecycle on top of it.
 - CRUD for patterns (no lifecycle — patterns don't have one in the
   architecture; they're formed and later superseded, not confirmed/rejected).
 - Confirming a hypothesis retains it into Hindsight as a real memory
-  (`confirmed_memory_id`), per architecture.md §6.1 ("a confirmed hypothesis
-  promotes into a fact through the normal memory-policy path").
+  (`confirmed_document_id` — Hindsight's retain endpoint never returns a
+  memory unit ID, so we set and store our own `document_id` instead), per
+  architecture.md §6.1 ("a confirmed hypothesis promotes into a fact through
+  the normal memory-policy path").
 
 ## Explicitly not in this pass
 

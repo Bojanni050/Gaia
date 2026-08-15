@@ -231,6 +231,20 @@ The next milestone introduces the first reflective layer: Hindsight. Gaia will b
 
 ---
 
+## Amendment — Hindsight Persists, Logos Reasons (§6.2)
+
+**Context.** Milestone 6's "what deliberately did not get built" paragraph drew the right line by instinct — automatic hypothesis testing and pattern formation are reasoning, so they don't belong in a storage sidecar — but architecture.md itself only said this once, in passing, inside §6.1 ("Logos performs the reasoning that proposes a hypothesis or later reasons about one"). §6 still described patterns as something "Hindsight forms," which quietly contradicted it. The instruction that triggered this amendment named the risk precisely: don't let the hypothesis lifecycle read as *intelligence living inside Hindsight* — Hindsight remembers, Logos concludes, and that split needed to be a named, enforceable rule, not an implication.
+
+**What changed.**
+- `docs/architecture.md` (now v2.3.0) — added **§6.2, "Division of Labor: Hindsight Persists, Logos Reasons"**, with an explicit table (Hindsight: stores/persists vs. Logos: forms/judges/tests/confirms/rejects/refines/revises) and the observe → store evidence → notice pattern → form hypothesis → persist → new evidence → evaluate → confirm/reject/refine → persist feedback loop. §6's pattern description was corrected — Logos forms patterns, Hindsight persists them, not the reverse. §4.2 (Logos) and §4.4 (Hindsight) "Owns"/"Never"/"Boundary rule" lines were updated to state the same split at the responsibility-table level. §14 gained an enforcement rule naming this explicitly, including for "any Hindsight-adjacent storage sidecar." §1 gained a numbered principle. The opening framing quote now carries the line verbatim: *"Hindsight is persistent memory and accumulated knowledge, not a second brain. Logos is where evidence becomes understanding."*
+- `services/cognition/README.md` — added an explicit statement that this service only ever persists, citing §6.2 by name, and fixed a stale reference to a `confirmed_memory_id` field that was already renamed to `confirmed_document_id` in the actual code during Milestone 6 but not caught in the README at the time.
+
+**Why this matters.** Naming this now, while `services/cognition` is small and its boundary is still easy to see, is what keeps it from drifting later — a future contributor adding "just a small heuristic" for auto-confirming high-confidence hypotheses inside the storage service would be reintroducing exactly the boundary collapse §14 exists to prevent, and now there's a specific rule to point at instead of re-deriving the argument. It also closes a real inconsistency: §6's own text said Hindsight forms patterns, which nothing in the actual implementation (or in Milestone 6's own reasoning) agreed with.
+
+**What this does not change.** No code changed. `services/cognition` and `HindsightProvider` already behaved this way — this amendment makes architecture.md say clearly what the implementation had already gotten right.
+
+---
+
 ## Amendment — Identity: Attunement vs. Mimicry
 
 **Context.** Gaia was built and refined for a single user first. As the long-term intent to make Gaia available beyond that first relationship became explicit, a latent risk in the personality model surfaced: `personality.md` described Gaia's voice as adaptive — "her phrasing, framing, and register shift toward theirs." For one user, that reads as attentiveness. Generalized to many users, it is the exact mechanism by which Gaia would start to sound like whoever she's talking to, and lose the one thing SOUL exists to guarantee — that she is recognizably herself to everyone, always.

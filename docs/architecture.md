@@ -1,7 +1,7 @@
 ---
 title: Gaia — Architecture
 document: architecture
-version: 2.2.0
+version: 2.3.0
 status: foundation
 last_updated: 2026-08-16
 owner: Gaia Product Foundation
@@ -15,6 +15,8 @@ framing: "Gaia is a lifelong personal intelligence designed to grow through unde
 > Gaia is the agency. Logos is Gaia's cognitive reasoning layer. Capabilities are instruments Gaia may employ.
 >
 > Gaia herself lives in **Gaia Cloud**. Gaia Desktop — and every future client — is a **representation of Gaia, not an instance of her**.
+>
+> Hindsight is persistent memory and accumulated knowledge, not a second brain. **Logos is where evidence becomes understanding.**
 >
 > The architecture exists to let that understanding deepen over a lifetime **without collapsing the boundaries** between the systems that make Gaia who she is.
 
@@ -196,11 +198,13 @@ This split is what makes multi-client support structural rather than aspirationa
 
 6. **Storage is abstract.** Hindsight's persistence technology is an implementation detail. Gaia depends on Hindsight *capabilities and contracts*, never on its storage internals.
 
-7. **Absolute model agnosticism.** Capabilities may use one or many providers. Gaia's identity, tone, and continuity must never change when a provider changes.
+7. **Hindsight persists; Logos reasons (§6.2).** Hindsight is persistent memory and accumulated knowledge, not a second brain. Forming a hypothesis or pattern, judging evidence, testing, confirming, rejecting, refining, and revising confidence all happen in Logos. Hindsight never does any of this — not in its own service, and not in any Hindsight-adjacent storage built to hold this content.
 
-8. **Separation of concerns is identity.** SOUL, Logos (intentIQ + reasonIQ), Hindsight, capabilities, and Gaia Desktop each own exactly one responsibility. No layer absorbs another's role, ever.
+8. **Absolute model agnosticism.** Capabilities may use one or many providers. Gaia's identity, tone, and continuity must never change when a provider changes.
 
-9. **Growth without boundary collapse.** Understanding deepens through defined interfaces (memory policies, reflection, knowledge contracts) — not by letting layers bleed into one another.
+9. **Separation of concerns is identity.** SOUL, Logos (intentIQ + reasonIQ), Hindsight, capabilities, and Gaia Desktop each own exactly one responsibility. No layer absorbs another's role, ever.
+
+10. **Growth without boundary collapse.** Understanding deepens through defined interfaces (memory policies, reflection, knowledge contracts) — not by letting layers bleed into one another.
 
 ---
 
@@ -304,12 +308,12 @@ Gaia Desktop **does not**: perform reasoning, decide what to remember, hold the 
 
 ### 4.2 Logos — Cognitive Reasoning Layer
 
-- **Owns:** Gaia's cognitive processing — interpreting input, constructing meaning, and reasoning about what follows.
+- **Owns:** Gaia's cognitive processing — interpreting input, constructing meaning, and reasoning about what follows. This includes all judgment about Hindsight's hypotheses and patterns: forming them, weighing evidence, testing, confirming, rejecting, refining, and revising confidence (§6.2).
 - **Provides:** Two integrated faculties:
   - **intentIQ** — interprets what the user is trying to achieve.
   - **reasonIQ** — determines what this means, how to reason about it, and what conclusions follow.
-- **Never:** Executes actions, stores memory, or becomes a capability. Logos thinks *for* Gaia; it does not act on her behalf.
-- **Boundary rule:** Logos is Gaia's reasoning faculty, not Gaia herself. Gaia decides what to do with Logos's insights.
+- **Never:** Executes actions, stores memory, or becomes a capability. Logos thinks *for* Gaia; it does not act on her behalf. Never persists its own conclusions — a formed hypothesis or pattern is handed to Hindsight to hold (§6.2); Logos does not become a second place where understanding accumulates.
+- **Boundary rule:** Logos is Gaia's reasoning faculty, not Gaia herself. Gaia decides what to do with Logos's insights. Evidence becomes understanding in Logos; Hindsight only ever remembers what Logos concluded.
 
 ### 4.3 Gaia — Agency + Orchestrator
 
@@ -321,9 +325,9 @@ Gaia Desktop **does not**: perform reasoning, decide what to remember, hold the 
 ### 4.4 Hindsight — Long-Term Memory
 
 - **Owns:** Reflective, pattern-based long-term memory across defined memory domains. Runs in **Gaia Cloud**, alongside Gaia — not cached or duplicated on any client. Holds four kinds of content, each with a different epistemic status — **memories**, **facts**, **patterns**, and **hypotheses** (see §6.1) — never conflated with one another.
-- **Provides:** Capability contracts for storing reflections, retrieving relevant context, forming and querying patterns, and enforcing memory policies; contracts for proposing, testing, and resolving hypotheses (see §6.1). These contracts may be called by Gaia directly or by other capabilities when context is needed.
-- **Never:** Reasons, decides identity, or exposes storage internals. Never presents an unresolved hypothesis to Logos as if it were a confirmed fact. Never becomes a per-client cache of "what this device remembers" — there is one Hindsight, shared by every client of the same Gaia.
-- **Boundary rule:** Gaia depends on Hindsight *contracts*, not its database. Storage is fully swappable (see §7). Hindsight is not an optional capability — it is as load-bearing for Gaia's continuity as SOUL is for her identity.
+- **Provides:** Capability contracts for storing reflections, retrieving relevant context, and enforcing memory policies; contracts for persisting patterns and hypotheses (querying them, recording status/confidence changes) that Logos calls once *it* has formed, tested, or revised one (see §6.2). These contracts may be called by Gaia directly or by other capabilities when context is needed.
+- **Never:** Reasons, decides identity, or exposes storage internals. Never forms a hypothesis or a pattern, decides one is plausible, judges which evidence is relevant, or moves a hypothesis through its lifecycle — that judgment is Logos's, always (§6.2). Never presents an unresolved hypothesis to Logos as if it were a confirmed fact. Never becomes a per-client cache of "what this device remembers" — there is one Hindsight, shared by every client of the same Gaia.
+- **Boundary rule:** Gaia depends on Hindsight *contracts*, not its database. Storage is fully swappable (see §7). Hindsight is not an optional capability — it is as load-bearing for Gaia's continuity as SOUL is for her identity. Hindsight remembers what Gaia has learned; it does not determine what she can conclude from it.
 
 ### 4.5 Hermes — Reasoning Capability
 
@@ -412,9 +416,9 @@ for the next turn.
 
 Growth in understanding is the product thesis, and it is realized here **without** merging systems.
 
-- **Reflection, not logging.** Hindsight does not store the raw transcript as memory. It stores *reflections* and *patterns* selected by memory policies according to significance.
+- **Reflection, not logging.** Hindsight does not store the raw transcript as memory. It stores *reflections* and *patterns*, selected by memory policies according to significance.
 - **Memory policies are explicit contracts.** What is eligible to be remembered, at what fidelity, with what retention, and with what user visibility is governed by declared policies — not by ad-hoc model behavior.
-- **Patterns over facts.** Hindsight forms understanding of recurring patterns (how the user decides, communicates, works). Isolated facts belong in Chronicles (if/when that capability exists).
+- **Patterns over facts.** Gaia's understanding of recurring patterns (how the user decides, communicates, works) is what Hindsight is *for* — but Logos is what *forms* a pattern (see §6.2); Hindsight persists it and makes it retrievable. Isolated facts belong in Chronicles (if/when that capability exists).
 - **Provenance is preserved.** Every reflection retains where it came from, so the user can inspect, correct, or remove it (see §8).
 
 Because reflection happens through Hindsight's contract and identity is governed by SOUL, understanding can deepen indefinitely while every boundary stays intact. Growth is a function of richer memory contracts — never of one layer swallowing another.
@@ -423,12 +427,50 @@ Because reflection happens through Hindsight's contract and identity is governed
 
 Not everything Hindsight notices deserves the confidence of a stored fact or a formed pattern. A **hypothesis** is Hindsight's explicit way of holding a *not-yet-earned* belief — something Gaia has started to notice but has not yet confirmed — without either discarding it or prematurely promoting it to something she treats as settled.
 
-- **A hypothesis is a distinct epistemic status inside Hindsight**, alongside memories, facts, and patterns — not a new layer, not a reasoning engine, and not something Logos owns. Logos consumes hypotheses the way it consumes any other Hindsight content; it does not form or store them itself.
+- **A hypothesis is a distinct epistemic status inside Hindsight**, alongside memories, facts, and patterns — not a new layer, not a reasoning engine, and not something Logos owns as content. Hindsight is where a hypothesis *lives*; see §6.2 for what Logos does with it.
 - **Structure:** a hypothesis carries a `statement` (what Gaia thinks might be true), `confidence` (how sure she is, and only ever a degree — never treated as settled), `evidence` (the observations or reflections it's grounded in, each with provenance per §8), an optional `verification_plan` (what would raise or lower confidence), and a `status`.
-- **Lifecycle:** `proposed → testing → confirmed | rejected`. A **confirmed** hypothesis may be promoted into a fact or pattern through the normal memory-policy path (§6); a **rejected** one is retained with its outcome, not silently deleted — the history of what turned out *not* to be true is itself part of honest understanding. `testing` means Hindsight is actively looking for evidence that would move the needle in either direction.
+- **Lifecycle:** `proposed → testing → confirmed | rejected`. A **confirmed** hypothesis may be promoted into a fact or pattern through the normal memory-policy path (§6); a **rejected** one is retained with its outcome, not silently deleted — the history of what turned out *not* to be true is itself part of honest understanding. `testing` means evidence is actively being sought that would move the needle in either direction.
 - **Logos reasons over confidence, not just content.** When Logos draws on Hindsight, it receives each item's epistemic status alongside its content — a confirmed fact, a recognized pattern, and a hypothesis at `confidence: 0.72` are never presented to Logos as equivalent. This is what lets Gaia say, in effect, "I think this, based on what I've seen" rather than stating an unconfirmed guess as settled understanding — and it is enforced by SOUL (see soul.md — "She never pretends certainty").
-- **Why this belongs in Hindsight, not Logos:** a hypothesis is a *kind of memory content* — something Gaia holds and revisits over time, with provenance and a lifecycle — not a *reasoning operation*. Logos performs the reasoning that proposes a hypothesis or later reasons about one; Hindsight is where it lives, persists, and accumulates evidence between turns. Keeping the boundary here means a hypothesis survives exactly like any other memory — inspectable, editable, forgettable (§8) — rather than existing only inside a single reasoning pass.
+- **Why this belongs in Hindsight, not Logos:** a hypothesis is a *kind of memory content* — something Gaia holds and revisits over time, with provenance and a lifecycle — not a *reasoning operation*. Hindsight is where it lives, persists, and accumulates evidence between turns; Logos is what forms it, tests it, and moves it through its lifecycle (§6.2). Keeping the boundary here means a hypothesis survives exactly like any other memory — inspectable, editable, forgettable (§8) — rather than existing only inside a single reasoning pass.
 - **Rationale.** Treating every noticed pattern as either "not remembered" or "a permanent fact" forces a false binary onto genuinely uncertain understanding. Hypotheses let uncertainty persist honestly, be tested across future turns, and either earn its way into confirmed understanding or be honestly set aside — never let it collapse into unwarranted false confidence.
+
+### 6.2 Division of Labor: Hindsight Persists, Logos Reasons
+
+> **Hindsight is persistent memory and accumulated knowledge, not a second brain. Logos is where evidence becomes understanding.**
+
+This is easy to blur once hypotheses and patterns both "live in Hindsight" (§6.1, §6) — it becomes tempting to read that as Hindsight *doing* something with them. It doesn't. Hindsight's role is unchanged from the rest of this document: store, persist, retrieve. Every act of judgment about a hypothesis or pattern — forming it, deciding it's plausible, weighing which evidence matters, testing it, revising its confidence, confirming, rejecting, or refining it — is Logos's, never Hindsight's.
+
+| | **Hindsight** | **Logos** |
+|---|---|---|
+| Memories, facts | Stores them | Reads them |
+| Hypotheses | Persists statement, confidence, evidence, status, lifecycle | Forms them; reasons about plausibility; decides which evidence is relevant; tests/verifies; confirms, rejects, or refines |
+| Patterns | Persists content, confidence, source references | Forms them from recurring observations; decides they *are* a pattern, and what it means |
+| Confidence | Stores the current value | Revises it, based on new evidence |
+
+```
+
+Observation
+    ↓
+HINDSIGHT   stores evidence
+    ↓
+LOGOS       notices a possible pattern, forms a hypothesis
+    ↓
+HINDSIGHT   persists the hypothesis (proposed)
+    ↓
+(next turn — new observation / user feedback)
+    ↓
+HINDSIGHT   stores the new evidence, surfaces it as relevant context
+    ↓
+LOGOS       evaluates the hypothesis against it
+    ↓
+LOGOS       confirms / rejects / refines
+    ↓
+HINDSIGHT   persists the new status
+
+```
+
+- **Boundary rule:** any code that forms a hypothesis, judges evidence relevance, tests a hypothesis, or synthesizes a pattern belongs in Logos (or a capability Logos directs) — never in Hindsight's own service, and never in a Hindsight-adjacent storage sidecar built to hold this content (see §7). A storage layer that starts making these judgments has quietly become a second reasoning engine, which is exactly the boundary collapse §14 exists to prevent.
+- **What Hindsight is still allowed to do:** apply memory policies (§6) — significance filtering, retention, provenance — because those are storage-shaping decisions, not judgments about whether a hypothesis is *true*. The line is "what do I keep and how do I retrieve it" (Hindsight) versus "what do I conclude" (Logos).
 
 ---
 
@@ -546,6 +588,7 @@ To prevent silent boundary collapse over time:
 - **Feedback is first-class.** Feedback is not a side channel. It flows into Logos as a primary input for ongoing understanding.
 - **No client hosts Gaia.** Identity, cognition, memory, and orchestration run in Gaia Cloud only. A client (Gaia Desktop or any future one) that gains a local copy of any of these — even as a cache or a fallback — is a boundary violation, not an optimization.
 - **A hypothesis is never presented as a fact.** Confidence and status travel with hypothesis content everywhere it goes — into Logos, into responses, into the memory view. Silently rounding an unconfirmed hypothesis up to stated certainty is a violation of both this rule and SOUL's "never pretends certainty."
+- **Hindsight persists; Logos reasons (§6.2).** Forming a hypothesis, judging evidence relevance, testing, confirming, rejecting, refining, or revising confidence is Logos's job — never Hindsight's own service, and never a Hindsight-adjacent storage sidecar built to hold this content. A storage layer that starts making these judgments has become an unnamed second reasoning engine.
 
 These rules are the architectural expression of Gaia's promise: she can grow through understanding indefinitely because the systems that make her *her* never dissolve into one another.
 
@@ -553,22 +596,23 @@ These rules are the architectural expression of Gaia's promise: she can grow thr
 
 ## 15. Key Distinctions from Previous Architecture
 
-This version (2.2.0) adds to version 2.1.0, which refined 2.0.0; 2.0.0 introduced fundamental shifts from version 1.0.0:
+This version (2.3.0) adds to version 2.2.0, which added to 2.1.0, which refined 2.0.0; 2.0.0 introduced fundamental shifts from version 1.0.0:
 
-| Concept | v1.0.0 | v2.0.0 | v2.1.0 | v2.2.0 |
-|---------|--------|--------|--------|--------|
-| **Central entity** | Intent Engine as routing layer | Gaia as agency + orchestrator | *(unchanged)* | *(unchanged)* |
-| **Reasoning layer** | Hermes as reasoning capability | Logos (intentIQ + reasonIQ) as Gaia's cognitive layer | *(unchanged)* | *(unchanged)* |
-| **Hermes** | Central reasoning capability | One capability among many (optional instrument) | *(unchanged)* | *(unchanged)* |
-| **New capabilities** | Not explicitly named | Melodiq, SongCompanion explicitly named as optional instruments | *(unchanged)* | *(unchanged)* |
-| **Feedback** | Implicit in memory policies | First-class input in Gaia's cognitive loop | *(unchanged)* | *(unchanged)* |
-| **Where Gaia runs** | Implied client-side ("Gaia remains a desktop client") | Implied client-side | **Explicit: Gaia Cloud.** Gaia, Logos, Hindsight, and capabilities are named as cloud-hosted; Gaia Desktop is explicitly a client | *(unchanged)* |
-| **Backend stance (§9)** | "No speculative backends"; client-side by default | Same stance carried forward | **Reversed:** Gaia Cloud is the proven baseline, not speculative; the "no speculative infrastructure" stance now applies only to infrastructure *beyond* that baseline | *(unchanged)* |
-| **Multi-client story** | Not addressed | Not addressed | Structural: clients are representations of Gaia, never instances of her (§13, Deployment Topology) | *(unchanged)* |
-| **Hindsight's memory model** | Reflections and patterns only | Same, restated under Gaia Cloud | Same | **Adds hypotheses (§6.1):** memories, facts, patterns, and hypotheses as distinct epistemic statuses; hypotheses carry confidence, evidence, a `verification_plan`, and a `proposed → testing → confirmed/rejected` lifecycle |
-| **Logos and uncertainty** | Not addressed | Not addressed | Not addressed | Logos reasons over confidence, not just content — a hypothesis is never handed to Logos, or surfaced to the user, indistinguishably from a confirmed fact |
+| Concept | v1.0.0 | v2.0.0 | v2.1.0 | v2.2.0 | v2.3.0 |
+|---------|--------|--------|--------|--------|--------|
+| **Central entity** | Intent Engine as routing layer | Gaia as agency + orchestrator | *(unchanged)* | *(unchanged)* | *(unchanged)* |
+| **Reasoning layer** | Hermes as reasoning capability | Logos (intentIQ + reasonIQ) as Gaia's cognitive layer | *(unchanged)* | *(unchanged)* | *(unchanged)* |
+| **Hermes** | Central reasoning capability | One capability among many (optional instrument) | *(unchanged)* | *(unchanged)* | *(unchanged)* |
+| **New capabilities** | Not explicitly named | Melodiq, SongCompanion explicitly named as optional instruments | *(unchanged)* | *(unchanged)* | *(unchanged)* |
+| **Feedback** | Implicit in memory policies | First-class input in Gaia's cognitive loop | *(unchanged)* | *(unchanged)* | *(unchanged)* |
+| **Where Gaia runs** | Implied client-side ("Gaia remains a desktop client") | Implied client-side | **Explicit: Gaia Cloud.** Gaia, Logos, Hindsight, and capabilities are named as cloud-hosted; Gaia Desktop is explicitly a client | *(unchanged)* | *(unchanged)* |
+| **Backend stance (§9)** | "No speculative backends"; client-side by default | Same stance carried forward | **Reversed:** Gaia Cloud is the proven baseline, not speculative; the "no speculative infrastructure" stance now applies only to infrastructure *beyond* that baseline | *(unchanged)* | *(unchanged)* |
+| **Multi-client story** | Not addressed | Not addressed | Structural: clients are representations of Gaia, never instances of her (§13, Deployment Topology) | *(unchanged)* | *(unchanged)* |
+| **Hindsight's memory model** | Reflections and patterns only | Same, restated under Gaia Cloud | Same | **Adds hypotheses (§6.1):** memories, facts, patterns, and hypotheses as distinct epistemic statuses; hypotheses carry confidence, evidence, a `verification_plan`, and a `proposed → testing → confirmed/rejected` lifecycle | *(unchanged)* |
+| **Logos and uncertainty** | Not addressed | Not addressed | Not addressed | Logos reasons over confidence, not just content — a hypothesis is never handed to Logos, or surfaced to the user, indistinguishably from a confirmed fact | *(unchanged)* |
+| **Who forms/tests hypotheses & patterns (§6.2)** | Not addressed | Not addressed | Not addressed | Implicit — §6.1 said Logos "performs the reasoning," in passing | **Explicit division of labor:** Hindsight only ever persists and retrieves; forming, judging evidence, testing, confirming, rejecting, refining, and revising confidence are named as Logos's alone — including inside any Hindsight-adjacent storage sidecar (§7) |
 
-The core insight, extended: **Gaia is the agency. Logos is Gaia's cognitive reasoning layer. Capabilities are instruments Gaia may employ. Gaia herself lives in Gaia Cloud — every client, starting with Gaia Desktop, is a representation of her, not an instance of her. And what Gaia remembers is not all held with the same confidence — Hindsight lets her think "I suspect this" as honestly as she can say "I know this."**
+The core insight, extended: **Gaia is the agency. Logos is Gaia's cognitive reasoning layer. Capabilities are instruments Gaia may employ. Gaia herself lives in Gaia Cloud — every client, starting with Gaia Desktop, is a representation of her, not an instance of her. What Gaia remembers is not all held with the same confidence — Hindsight lets her think "I suspect this" as honestly as she can say "I know this." And Hindsight is persistent memory and accumulated knowledge, not a second brain: evidence becomes understanding in Logos, never in storage.**
 
 ---
 
@@ -579,8 +623,9 @@ This architecture.md is now the foundation. The following documents should be re
 1. **orchestrator.md** — recontextualize IntentIQ and OrchestratorIQ under Logos (intentIQ + reasonIQ within Logos, not as Hermes-internal layers); already done for v2.0.0, re-check for cloud/client language.
 2. **README.md, vision.md, coding-standards.md, roadmap.md, soul.md** — update any remaining "desktop client owns orchestration" or "no speculative backend" language to match §9's revised stance; add hypotheses to any description of what Hindsight holds.
 3. **hermes/soul.md and Hermes documentation** — update to reflect Hermes as one cloud-hosted capability among many.
-4. **intentIQ / reasonIQ docs** — if they exist separately, align with Logos framing, and with how Logos consumes hypothesis confidence (§6.1).
+4. **intentIQ / reasonIQ docs** — if they exist separately, align with Logos framing, with how Logos consumes hypothesis confidence (§6.1), and with Logos owning all hypothesis/pattern judgment (§6.2).
 5. **capability documentation** (Melodiq, SongCompanion, etc.) — ensure each is framed as an optional, cloud-hosted instrument.
 6. **Local observation/capture capability** (deferred, see "Deployment Topology" above) — design separately when it is prioritized; do not retrofit it into this version's diagrams.
+7. **services/cognition** (the hypothesis/pattern storage sidecar) — already built storage-only, matching §6.2; no code change implied by this revision, only that this document now says explicitly what that service's own README already said implicitly.
 
 Each document should be held against this new architecture.md as the single source of truth.
