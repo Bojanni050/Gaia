@@ -2,6 +2,7 @@ import { useCallback, useEffect, useRef, useState } from 'react';
 import { getReasoningProvider } from '../integration/reasoning';
 import { FoundationEngine } from '../foundation';
 import { phraseReasoningError } from '../presence/errorPhrases';
+import { recallRelevantContext, renderMemoryContext, reflectOnTurn } from './memoryContext';
 
 const emptyStream = { active: false, messageId: null, content: '', reasoning: '', presence: 'quiet' };
 const PRESENCE_THINKING = 'thinking';
@@ -71,7 +72,7 @@ export function useConversation() {
     if (abortRef.current) abortRef.current.abort();
   }, []);
 
-  const runStream = useCallback(async (convId, transcript) => {
+  const runStream = useCallback(async (convId, transcript, userText) => {
     const controller = new AbortController();
     abortRef.current = controller;
 
@@ -118,6 +119,7 @@ export function useConversation() {
         };
       });
       setStream(emptyStream);
+      reflectOnTurn({ conversationId: convId, userText, assistantText: fullText, assistantMessageId: assistantId });
       return fullText;
     } catch (e) {
       if (controller.signal.aborted) {
@@ -166,14 +168,9 @@ export function useConversation() {
     });
 
     const currentConvMessages = byConv[convId] || [];
-    const context = deriveContext([...currentConvMessages, newMsg]);
-    const transcript = buildTranscript([
-      { role: 'system', content: FoundationEngine.getPrompt(context) },
-      ...currentConvMessages,
-      newMsg,
-    ]);
+    const { transcript, userText: recalledFor } = await assembleTranscript([...currentConvMessages, newMsg]);
 
-    await runStream(convId, transcript);
+    await runStream(convId, transcript, recalledFor);
   }, [activeId, byConv, newConversation, runStream]);
 
   const editMessage = useCallback(async (messageId, newContent) => {
@@ -195,13 +192,8 @@ export function useConversation() {
       [activeId]: truncated,
     }));
 
-    const context = deriveContext(truncated);
-    const transcript = buildTranscript([
-      { role: 'system', content: FoundationEngine.getPrompt(context) },
-      ...truncated,
-    ]);
-
-    await runStream(activeId, transcript);
+    const { transcript, userText } = await assembleTranscript(truncated);
+    await runStream(activeId, transcript, userText);
   }, [activeId, byConv, runStream]);
 
   const deleteMessage = useCallback((messageId) => {
@@ -228,13 +220,8 @@ export function useConversation() {
       [activeId]: truncated,
     }));
 
-    const context = deriveContext(truncated);
-    const transcript = buildTranscript([
-      { role: 'system', content: FoundationEngine.getPrompt(context) },
-      ...truncated,
-    ]);
-
-    await runStream(activeId, transcript);
+    const { transcript, userText } = await assembleTranscript(truncated);
+    await runStream(activeId, transcript, userText);
   }, [activeId, byConv, runStream]);
 
   const retry = useCallback(async (messageId) => {
@@ -250,13 +237,8 @@ export function useConversation() {
       [activeId]: truncated,
     }));
 
-    const context = deriveContext(truncated);
-    const transcript = buildTranscript([
-      { role: 'system', content: FoundationEngine.getPrompt(context) },
-      ...truncated,
-    ]);
-
-    await runStream(activeId, transcript);
+    const { transcript, userText } = await assembleTranscript(truncated);
+    await runStream(activeId, transcript, userText);
   }, [activeId, byConv, runStream]);
 
   return {
@@ -268,6 +250,36 @@ export function useConversation() {
 
 function buildTranscript(messages) {
   return messages.map((m) => ({ role: m.role, content: m.content }));
+}
+
+function latestUserText(messages) {
+  for (let i = messages.length - 1; i >= 0; i -= 1) {
+    if (messages[i].role === 'user') return messages[i].content || '';
+  }
+  return '';
+}
+
+/**
+ * Assembles the transcript sent to Hermes: identity system prompt, then a
+ * best-effort recalled-memory system message (architecture §5.1: capability
+ * retrieves relevant context before executing), then the conversation.
+ * Recall is query'd on the latest user turn and never blocks longer than
+ * recallRelevantContext's own timeout, nor fails the conversation if
+ * Hindsight is unreachable.
+ */
+async function assembleTranscript(messages) {
+  const context = deriveContext(messages);
+  const userText = latestUserText(messages);
+  const reflections = await recallRelevantContext(userText);
+  const memoryBlock = renderMemoryContext(reflections);
+
+  const systemMessages = [{ role: 'system', content: FoundationEngine.getPrompt(context) }];
+  if (memoryBlock) systemMessages.push({ role: 'system', content: memoryBlock });
+
+  return {
+    transcript: buildTranscript([...systemMessages, ...messages]),
+    userText,
+  };
 }
 
 function deriveContext(messages) {

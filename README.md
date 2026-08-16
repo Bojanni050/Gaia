@@ -32,6 +32,6 @@ Genesis 🌱 → Speaking 💬 → Remembering 🌿
 
 The foundation is complete.
 Gaia speaks — through a real, local reasoning engine, with a streaming conversation, presence transitions, and quiet error phrases.
-Gaia has her own connection to Hindsight — a dedicated memory bank, not shared with any other assistant — and can now hold patterns and hypotheses (confidence, evidence, a `proposed → testing → confirmed/rejected` lifecycle) via `services/cognition`. Nothing in the desktop UI reads from any of it yet.
+Gaia has her own connection to Hindsight — a dedicated memory bank, not shared with any other assistant — and can now hold patterns and hypotheses (confidence, evidence, a `proposed → testing → confirmed/rejected` lifecycle) via `services/cognition`. The desktop now reflects and recalls through it: every turn is informed by relevant memory (best-effort — a slow or unreachable Hindsight never blocks or breaks the conversation) and, once a response completes, the exchange is reflected into Hindsight asynchronously.
 
-Next: wire the desktop to actually reflect, recall, and reason about hypotheses through it.
+Next: hypothesis/pattern reasoning itself (Logos's side of §6.2) — nothing forms or tests a hypothesis automatically yet. Also still missing: the opt-in memory view (architecture §8).

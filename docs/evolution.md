@@ -245,6 +245,23 @@ The next milestone introduces the first reflective layer: Hindsight. Gaia will b
 
 ---
 
+## Milestone 7 — Desktop Wired to Reflect and Recall
+
+**Goal.** Close the gap every prior Hindsight milestone left open on purpose: nothing in the desktop actually used the connection. Wire real recall (before a turn) and real reflection (after one) into `useConversation`.
+
+**What was built.**
+- `frontend/src/gaia/state/memoryContext.js` — `recallRelevantContext(query)`, `renderMemoryContext(reflections)`, `reflectOnTurn(...)`. Recall is best-effort and time-boxed (4s); a slow or unreachable Hindsight degrades to "no context," never to a broken or delayed turn. Reflection is fire-and-forget, fired only after a turn actually succeeds.
+- `useConversation.js` — `send`/`editMessage`/`regenerate`/`retry` now share `assembleTranscript()`: recall on the latest user turn, and — only if something relevant came back — an extra system message carrying it, appended after the identity prompt. `runStream` reflects on the completed exchange, but only on success; an aborted or failed turn reflects nothing (matches architecture.md §10's REFLECT step, which only follows COMPLETE).
+- 10 new tests (`memoryContext.test.js` + additions to `useConversation.test.js`) covering: recall injecting a system message, no system message when recall is empty, reflection firing after success, reflection *not* firing after a failed stream. Full frontend suite: 8 suites, 76 tests.
+
+**What verification actually covered, and what it didn't.** Manually exercised in a browser preview: the app didn't crash, and Gaia degraded exactly as designed when both Hermes and Hindsight were unreachable. But this preview sandbox turned out unable to route to the Tailscale-only Hindsight/cognition backend at all — confirmed directly (`fetch('http://100.64.144.93:8888/health')` → `Failed to fetch`, no network-request entry logged, unlike a same-host connection-refused which *does* get logged) — so a full live round-trip through the actual desktop UI, with real recalled content showing up in a real Hermes call, was not observed this session. The HTTP contract underneath (`HindsightProvider` itself) was already live-verified against the real backend in Milestones 5 and 6; this milestone only adds thin, now-unit-tested glue on top of it, and that glue's failure path is what got to be observed live.
+
+**Architectural reasoning.** Recall runs before the reasoning call, not in parallel with it — architecture.md §5.1 lists context retrieval as a step the capability takes before executing, and Hermes should be able to see recalled context in its system prompt from the first token, not receive it as an afterthought. Reflection runs after, asynchronously, matching the same section's REFLECT step. Neither call is allowed to be user-visible as a distinct action ("Invisible Implementation," principles.md) — recall failures are silent by design; only reflection failures log a `console.warn`, since a silently-dropped memory write is a worse failure mode than a silently-skipped recall.
+
+**What this does not change.** No hypothesis or pattern reasoning is wired to conversation turns yet — that's Logos's job (§6.2), and Logos itself doesn't have a concrete implementation in this codebase yet (today "Logos" is a naming convention for logic living inside `useConversation`/the system prompt, not a standalone service). The memory view (§8) still doesn't exist.
+
+---
+
 ## Amendment — Identity: Attunement vs. Mimicry
 
 **Context.** Gaia was built and refined for a single user first. As the long-term intent to make Gaia available beyond that first relationship became explicit, a latent risk in the personality model surfaced: `personality.md` described Gaia's voice as adaptive — "her phrasing, framing, and register shift toward theirs." For one user, that reads as attentiveness. Generalized to many users, it is the exact mechanism by which Gaia would start to sound like whoever she's talking to, and lose the one thing SOUL exists to guarantee — that she is recognizably herself to everyone, always.
