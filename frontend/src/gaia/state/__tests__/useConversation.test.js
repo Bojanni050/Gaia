@@ -136,7 +136,7 @@ describe('useConversation hook', () => {
     expect(result.current.messages.length).toBe(2);
   });
 
-  test('recalls relevant context before sending and injects it as a system message', async () => {
+  test('recalls relevant context when the turn carries a memory signal, and injects it as a compact system message', async () => {
     mockRetrieveRelevantContext.mockImplementation(() => Promise.resolve([
       { id: 'r1', domain: 'preferences', summary: 'Bo prefers dark mode', confidence: 0.9 },
     ]));
@@ -146,10 +146,10 @@ describe('useConversation hook', () => {
     });
 
     await act(async () => {
-      await result.current.send('What theme should I use?');
+      await result.current.send('What theme did I say I preferred last time?');
     });
 
-    expect(mockRetrieveRelevantContext).toHaveBeenCalledWith('What theme should I use?', expect.any(Object));
+    expect(mockRetrieveRelevantContext).toHaveBeenCalledWith('What theme did I say I preferred last time?', expect.any(Object));
     const transcript = mockStream.mock.calls[0][0];
     const memoryMessage = transcript.find((m) => m.role === 'system' && m.content.includes('Bo prefers dark mode'));
     expect(memoryMessage).toBeDefined();
@@ -162,7 +162,7 @@ describe('useConversation hook', () => {
     });
 
     await act(async () => {
-      await result.current.send('What time zone are you usually working in?');
+      await result.current.send('What did we decide about the deployment configuration?');
     });
 
     expect(mockRetrieveRelevantContext).toHaveBeenCalled();
@@ -182,6 +182,22 @@ describe('useConversation hook', () => {
     });
 
     expect(mockRetrieveRelevantContext).not.toHaveBeenCalled();
+  });
+
+  test('skips recall for a substantive turn the current conversation already answers — memory is not automatic', async () => {
+    const { result } = renderHook(() => useConversation());
+    act(() => {
+      result.current.newConversation('seed');
+    });
+
+    await act(async () => {
+      await result.current.send('What theme should I use tonight?');
+    });
+
+    expect(mockRetrieveRelevantContext).not.toHaveBeenCalled();
+    const transcript = mockStream.mock.calls[0][0];
+    const systemMessages = transcript.filter((m) => m.role === 'system');
+    expect(systemMessages.length).toBe(1); // identity prompt only, no memory block
   });
 
   test('reflects on the turn after a successful response', async () => {

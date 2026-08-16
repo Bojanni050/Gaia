@@ -13,17 +13,41 @@ describe('shouldRecall', () => {
     expect(shouldRecall('  sure  ')).toBe(false);
   });
 
-  test('does not treat filler as a substring match', () => {
-    expect(shouldRecall('ok, but why does Hermes retry twice?')).toBe(true);
-  });
-
   test('skips very short queries below the length threshold', () => {
     expect(shouldRecall('why')).toBe(false); // 3 chars, under default 12
   });
 
-  test('keeps substantive queries', () => {
-    expect(shouldRecall('What theme should I use tonight?')).toBe(true);
+  test('skips a substantive question answerable from the current conversation — no past/durable signal', () => {
+    expect(shouldRecall('What theme should I use tonight?')).toBe(false);
+    expect(shouldRecall('What time zone are you usually working in?')).toBe(false);
+    expect(shouldRecall("How's your day going?")).toBe(false);
+  });
+
+  test('recalls when the turn explicitly refers to the past (English)', () => {
     expect(shouldRecall('Remind me what I said about the migration plan')).toBe(true);
+    expect(shouldRecall('Do you remember why I switched jobs?')).toBe(true);
+    expect(shouldRecall('Last time we talked about this, what did we decide?')).toBe(true);
+    expect(shouldRecall('You said something about this before, what was it?')).toBe(true);
+  });
+
+  test('recalls when the turn explicitly refers to the past (Dutch)', () => {
+    expect(shouldRecall('Weet je nog wat ik eerder zei over dit project?')).toBe(true);
+    expect(shouldRecall('Je zei vorige keer iets over de database')).toBe(true);
+  });
+
+  test('recalls when the turn references durable, cross-conversation context', () => {
+    expect(shouldRecall('What did we decide about the project database?')).toBe(true);
+    expect(shouldRecall('Which server is the deployment configuration pointing at?')).toBe(true);
+    expect(shouldRecall('What is my preference for how we structure the workflow?')).toBe(true);
+  });
+
+  test('does not treat filler as a substring match', () => {
+    expect(shouldRecall('ok, but why does Hermes retry twice?')).toBe(false); // substantive, but no memory signal
+  });
+
+  test('does not false-positive on substrings of signal words', () => {
+    expect(shouldRecall('Can you explain this projection of quarterly numbers?')).toBe(false); // "projection" contains "project"
+    expect(shouldRecall('What happens beforehand in this function?')).toBe(false); // "beforehand" contains "before"
   });
 });
 

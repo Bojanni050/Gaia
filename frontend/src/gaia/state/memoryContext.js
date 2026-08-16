@@ -28,6 +28,58 @@ export async function recallRelevantContext(query) {
   }
 }
 
+const MAX_MEMORY_LINES = 6;
+const UNCERTAIN_CONFIDENCE_THRESHOLD = 0.55;
+
+function normalizeSummary(summary) {
+  return (summary || '').replace(/\s+/g, ' ').trim();
+}
+
+/**
+ * Formats a single reflection into a compact line, preserving — never
+ * inventing or upgrading — its epistemic status. A reflection recalled with
+ * low confidence is tagged "(uncertain)" rather than stated as settled fact
+ * (architecture.md §6.1's "never presented as a fact" rule, applied here to
+ * whatever confidence Hindsight returned with the recall, not just to a
+ * formal Hypothesis record). Returns null for anything with no summary to
+ * show, so callers can filter it out.
+ * @param {import('../../contracts/hindsight').Reflection} reflection
+ * @returns {string|null}
+ */
+function formatReflectionLine(reflection) {
+  const summary = normalizeSummary(reflection?.summary);
+  if (!summary) return null;
+  const isUncertain = typeof reflection.confidence === 'number' && reflection.confidence < UNCERTAIN_CONFIDENCE_THRESHOLD;
+  return isUncertain ? `- ${summary} (uncertain)` : `- ${summary}`;
+}
+
+/**
+ * Condenses raw Hindsight recall results into the compact lines Gaia's
+ * reasoning is actually given — never the raw provider response. No
+ * metadata, IDs, timestamps, or provenance fields cross this boundary; only
+ * the summary text and its confidence-derived certainty tag do. This is a
+ * formatting operation, not a reasoning one: it never merges, resolves, or
+ * picks between differing/conflicting summaries — each stays its own line
+ * so Logos still sees the disagreement, and it never invents content that
+ * isn't in the recalled summary.
+ *
+ * @param {import('../../contracts/hindsight').Reflection[]} reflections
+ * @returns {string[]}
+ */
+export function condenseMemoryContext(reflections) {
+  if (!reflections || reflections.length === 0) return [];
+  const seen = new Set();
+  const lines = [];
+  for (const reflection of reflections) {
+    const line = formatReflectionLine(reflection);
+    if (!line || seen.has(line)) continue;
+    seen.add(line);
+    lines.push(line);
+    if (lines.length >= MAX_MEMORY_LINES) break;
+  }
+  return lines;
+}
+
 /**
  * Renders recalled reflections into a system-prompt block. Returns null
  * when there is nothing worth surfacing, so callers can skip adding an
@@ -36,15 +88,14 @@ export async function recallRelevantContext(query) {
  * @returns {string|null}
  */
 export function renderMemoryContext(reflections) {
-  if (!reflections || reflections.length === 0) return null;
-  const lines = reflections
-    .filter((r) => r.summary)
-    .map((r) => `- ${r.summary}`);
+  const lines = condenseMemoryContext(reflections);
   if (lines.length === 0) return null;
   return [
     'From your long-term memory (Hindsight), things you have come to understand',
     'that may be relevant to this conversation. Use only what genuinely applies;',
     'do not force it in, and do not announce that you are consulting memory.',
+    'Items marked (uncertain) are not confirmed — hold them as a possibility,',
+    'not a settled fact.',
     '',
     ...lines,
   ].join('\n');
