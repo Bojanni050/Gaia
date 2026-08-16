@@ -4,7 +4,7 @@ import { FoundationEngine } from '../foundation';
 import { phraseReasoningError } from '../presence/errorPhrases';
 import { recallRelevantContext, renderMemoryContext, reflectOnTurn } from './memoryContext';
 import { deriveIntent } from './intentIQ';
-import { interpretIntent } from '../logos';
+import { interpretIntent, reasonAboutTurn } from '../logos';
 
 const emptyStream = { active: false, messageId: null, content: '', reasoning: '', presence: 'quiet' };
 const PRESENCE_THINKING = 'thinking';
@@ -21,18 +21,32 @@ function titleFrom(text) {
 }
 
 /**
- * Development-only visibility into Logos's IntentDecision. This milestone
- * establishes the intentIQ seam (user message → IntentIQ → validated
- * IntentDecision → existing Gaia response flow) without changing routing or
- * the response itself — see docs/evolution.md. Fire-and-forget: intentIQ
- * never throws (gaia/logos/intentIQ/intentIQ.js fails safe internally), and
- * this must never affect or delay the conversation.
+ * Development-only visibility into Logos's full cognitive loop for this
+ * turn: intentIQ's IntentDecision, then reasonIQ's ReasoningResult
+ * constructed from it. This milestone establishes both seams (user message
+ * → intentIQ → IntentDecision → reasonIQ → ReasoningResult → existing Gaia
+ * response flow) without changing routing or the response itself — see
+ * docs/evolution.md. Fire-and-forget and non-blocking: neither faculty
+ * throws (both fail safe internally), and this must never affect or delay
+ * the conversation.
+ *
+ * Deliberately does not pass recalled memory into reasonAboutTurn here —
+ * doing so would mean either a second Hindsight recall call (the real one
+ * happens inside assembleTranscript, gated by memoryPolicy) or a larger
+ * refactor of the turn lifecycle than this milestone calls for. reasonIQ
+ * fully supports consuming recalled memory (see reasonIQ.test.js); wiring
+ * that into this dev-log path is left for when reasonIQ starts driving
+ * real behavior rather than being inspected in isolation.
  */
-function logIntentDecisionForDev(messages) {
+function logLogosForDev(messages) {
   if (process.env.NODE_ENV === 'production') return;
   interpretIntent(messages).then((decision) => {
     // eslint-disable-next-line no-console
     console.debug('[Logos:intentIQ]', decision);
+    return reasonAboutTurn(decision, messages).then((result) => {
+      // eslint-disable-next-line no-console
+      console.debug('[Logos:reasonIQ]', result);
+    });
   });
 }
 
@@ -187,7 +201,7 @@ export function useConversation() {
 
     const currentConvMessages = byConv[convId] || [];
     const turnSoFar = [...currentConvMessages, newMsg];
-    logIntentDecisionForDev(turnSoFar);
+    logLogosForDev(turnSoFar);
     const { transcript, userText: recalledFor } = await assembleTranscript(turnSoFar);
 
     await runStream(convId, transcript, recalledFor);

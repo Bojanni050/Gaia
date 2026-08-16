@@ -1,7 +1,7 @@
 ---
 title: Gaia — IntentIQ & OrchestratorIQ
 document: orchestrator
-version: 1.1.0
+version: 1.2.0
 status: active
 last_updated: 2026-08-16
 owner: Gaia Product Foundation
@@ -26,7 +26,7 @@ This document names the two layers of *judgment* that sit inside that pipeline, 
 
 **A note on scope, since two things are now named "Intent."** [architecture.md §4.2–4.3](./architecture.md#4-system-responsibilities--boundaries) name **Logos's `intentIQ`** and **Gaia** herself as the layer that decides *which capability* (Hermes, Melodiq, SongCompanion, MCP, or none) a turn needs at all — that decision happens at Gaia's level, in her [Cognitive Loop](./architecture.md#cognitive-loop), before any capability is invoked. **IntentIQ**, described below, is a different, later, and more narrowly-scoped judgment despite the similar name: it only runs *after* Gaia has already routed a turn to Hermes specifically, and it decides *how Hermes should reason* about that turn — never whether Hermes should be involved in the first place. Logos's `intentIQ` asks "does this turn need a capability, and which one?"; this document's IntentIQ, running inside Hermes, asks "given that Hermes was chosen, what kind of thinking does it need?" Confusing the two re-creates exactly the problem this document exists to prevent — a single, unnamed judgment quietly doing two jobs.
 
-**Implementation note.** Logos's `intentIQ` — the "does this turn need a capability, and which one" judgment named above — now has a first real implementation at `frontend/src/gaia/logos/intentIQ` (see `docs/evolution.md`). It produces a validated `IntentDecision` (intent, status, confidence, candidates, entities, source of truth, capability, reasoning profile) through a dedicated prompt and the same generic reasoning-provider abstraction the rest of Gaia Desktop uses — not a Hermes-specific call. This milestone establishes the seam only: the decision is currently dev-logged for inspection and does not yet drive capability routing or Foundation selection, so nothing about *this* document's IntentIQ/OrchestratorIQ pipeline (still Hermes-internal, still downstream of Logos's decision) changes.
+**Implementation note.** Logos's `intentIQ` — the "does this turn need a capability, and which one" judgment named above — now has a first real implementation at `frontend/src/gaia/logos/intentIQ` (see `docs/evolution.md`). It produces a validated `IntentDecision` (intent, status, confidence, candidates, entities, source of truth, capability, reasoning profile) through a dedicated prompt and the same generic reasoning-provider abstraction the rest of Gaia Desktop uses — not a Hermes-specific call. Logos's `reasonIQ` — "what does this turn mean, and what follows" — also now has a first real implementation at `frontend/src/gaia/logos/reasonIQ`, consuming `intentIQ`'s `IntentDecision` and producing a validated `ReasoningResult` (interpretation, evidence tagged fact/inference/hypothesis, uncertainties, contradictions, missing information, conclusions, hypotheses, a suggested capability, and recommended next steps). Both faculties establish their seam only: their output is currently dev-logged for inspection and does not yet drive capability routing, Foundation selection, or Gaia's response, so nothing about *this* document's IntentIQ/OrchestratorIQ pipeline (still Hermes-internal, still downstream of Logos's faculties) changes.
 
 ---
 

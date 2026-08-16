@@ -15,31 +15,12 @@
 import { getReasoningProvider } from '../../integration/reasoning';
 import { buildIntentPrompt } from './prompt';
 import { validateIntentDecision, fallbackDecision } from './schema';
+import { parseJsonResponse } from '../shared/parseJsonResponse';
 
 function devWarn(reason, detail) {
   if (process.env.NODE_ENV === 'production') return;
   // eslint-disable-next-line no-console
   console.warn(`[Logos:intentIQ] ${reason}`, detail ?? '');
-}
-
-/**
- * Extracts a JSON object from a model response, tolerating markdown code
- * fences (some providers wrap JSON in ```json fences despite instructions).
- * @param {string} text
- * @returns {unknown|undefined} parsed object, or undefined if unparsable
- */
-function parseDecisionJson(text) {
-  if (typeof text !== 'string' || !text.trim()) return undefined;
-  const fenced = text.match(/```(?:json)?\s*([\s\S]*?)```/i);
-  const candidate = fenced ? fenced[1] : text;
-  const start = candidate.indexOf('{');
-  const end = candidate.lastIndexOf('}');
-  if (start === -1 || end === -1 || end < start) return undefined;
-  try {
-    return JSON.parse(candidate.slice(start, end + 1));
-  } catch (_) {
-    return undefined;
-  }
 }
 
 /**
@@ -65,7 +46,7 @@ export async function interpretIntent(messages, options = {}) {
     return fallbackDecision();
   }
 
-  const parsed = parseDecisionJson(raw);
+  const parsed = parseJsonResponse(raw);
   if (parsed === undefined) {
     devWarn('malformed JSON output', raw);
     return fallbackDecision();
