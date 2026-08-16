@@ -26,6 +26,7 @@ This is the long-term foundation for Gaia. Every document reinforces the same pr
 | 6 | [coding-standards.md](./coding-standards.md) | Structure, contracts, state, testing, dependency governance, maintainability |
 | 7 | [ui-principles.md](./ui-principles.md) | Conversation-first, calm, silence, motion-as-meaning, legible growth |
 | 8 | [orchestrator.md](./orchestrator.md) | IntentIQ (intent → reasoning profile) vs. OrchestratorIQ (model routing → Gaia Personality Filter), both inside Hermes, downstream of Logos |
+| 9 | [split-plan.md](./split-plan.md) | Boundaries between Gaia Cloud / Web / Desktop in the current monorepo and the phased plan to split them into three independent repositories |
 
 ## Gaia's Structure
 
