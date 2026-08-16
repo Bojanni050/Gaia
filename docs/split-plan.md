@@ -127,3 +127,9 @@ Both are configuration-level choices via the settings module, not refactors. Dec
 - No cognitive logic moves into a client as part of the reorganization — the split moves *code between repositories*, not *responsibilities between layers*.
 - No model-specific assumptions enter any client; provider swaps remain a config change.
 - Web is not degraded to make Desktop easier, and Desktop is not a fork — both are clients of the same Gaia Cloud contracts.
+
+---
+
+## Addendum — Milestone 8 (2026-08-16): Desktop no longer wraps Gaia Web
+
+Coupling point 1 below ("the frontend is 100% shared") is resolved. Gaia Desktop now has its own UI (`desktop/`, Vite + React) served by its own Tauri build; `tauri.conf.json` points at `desktop/dist`, and the desktop-only modules that had lived inside `frontend/src/gaia/` moved into the desktop tree. Desktop conversations go through the Rust `ServerLink` seam (`conversation/turn` envelope) — never through Gaia Web. Gaia Web is unchanged and independent. Phase 0, step 3 of this plan is thereby completed; the overlay strategy in Phase 3 is no longer needed — Desktop carries its own frontend outright. See evolution.md, Milestone 8.

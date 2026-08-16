@@ -514,6 +514,35 @@ The actual constitution — the "You are Gaia…" document with her character, c
 
 ---
 
+## Milestone 8 — One Gaia, Multiple Clients: Desktop Gets Its Own Face
+
+**Goal.** Gaia Desktop stopped being a browser wrapper. Until now the Tauri shell loaded Gaia Web's React app in a webview (`frontendDist: ../frontend/build`) — one web application packaged two ways. The requirement was blunt and correct: Desktop must be a genuine native client with its own Tauri/Rust shell, its own frontend, its own conversation interface and presence layer, talking to Gaia Cloud through the API/WebSocket seam — while Gaia Web continues to work, independently, as the web client. One Gaia, multiple clients.
+
+**What was built.**
+
+- **`desktop/`** — a new, independent frontend (Vite + React), the desktop's own UI: sidebar with threads, conversation view, composer, presence bar with a breathing orb, settings panel. Gaia's dark, serif-accented design language, written for this client rather than imported from the web app.
+- **`src-tauri/tauri.conf.json`** repointed from `../frontend` to `../desktop`; `beforeDevCommand`/`beforeBuildCommand` now drive the desktop UI's own dev server and build. A CSP was set for production builds (dev CSP stays open for Vite HMR).
+- **Conversation over the Gaia Cloud seam, and nowhere else.** The desktop UI sends a turn via the Rust `ServerLink` (`server_request` → `POST conversation/turn`) and renders the reply. It performs no reasoning, loads no SOUL, calls no Hermes, no Hindsight, no cognition service — identity, memory, intent and reasoning are server-side by contract. The request/response envelope lives in `desktop/src/state/contract.js` with tests; when the cloud endpoint grows streaming, only the transport beneath this seam changes.
+- **Presence from the link, not from the web app** — `useServerStatus` listens to the Rust `server://status` events; quiet mode toggles through the Rust presence controller. Failure phrasing is calm and typed (`phrases.js`, tested): no HTTP codes, no provider names, ever.
+- **Desktop-only modules removed from the web codebase.** `frontend/src/gaia/{server,capture,settings}` and `ServerStatus.jsx` (interim desktop touches inside Gaia Web) moved into the desktop UI; the `@tauri-apps/api` dependency left `frontend/package.json`. Web tests (177) and build pass unchanged.
+- Root `dev:desktop`/`build:desktop` no longer run the foundation engine — the desktop has no client-side SOUL to build.
+
+**Architectural reasoning.**
+
+- The earlier Rust layer (communication/capture/audio/notifications/settings/presence) was already built client-agnostic; this milestone only gave it its own face. No cognitive logic crossed into the desktop to get there — the "conversation endpoint" the desktop calls is a declared contract, honestly unimplemented on the cloud side until the Gaia API milestone lands it.
+- Until that endpoint exists, a desktop conversation without a configured server degrades calmly: presence shows *present*, the welcome line explains, and a turn returns a quiet phrase pointing at settings. That is the correct failure mode for a client whose intelligence lives elsewhere — not an error screen.
+- Gaia Web's client-side orchestration (HermesProvider, Hindsight recall/reflect, Logos) is *not* mirrored into the desktop. Duplicating it there would create a second, diverging copy of Gaia's cognition — exactly what "one Gaia, multiple clients" forbids.
+
+**Trade-offs.**
+
+- *In-memory threads* — same trade as web Milestone 2; persistence arrives with the desktop settings/local-cache layer, not before it's earned.
+- *Plain-text replies* — markdown/LaTeX/Mermaid rendering arrives with the streaming transport, not before.
+- *Desktop can't talk to the de facto VPS topology directly* — by design. It speaks the future uniform Gaia API only.
+
+**What this does not change.** Gaia Web's behavior, build, and deployment (higaia.nl, same Docker network, same proxies) are untouched. The Rust capability modules, the split plan (`docs/split-plan.md`), and the provider-agnostic boundaries all stand; the split plan's "frontend is 100% shared" coupling point is now resolved by this milestone (see its addendum).
+
+---
+
 ## How to Read This Document
 
 Each milestone records:

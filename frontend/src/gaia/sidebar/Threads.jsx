@@ -1,7 +1,6 @@
 import React from 'react';
 import { Plus, Trash2 } from 'lucide-react';
 import { L } from '../lib/lexicon';
-import ServerStatus from '../server/ServerStatus';
 
 export default function Threads({ 
   conversations, 
@@ -45,7 +44,6 @@ export default function Threads({
       </div>
 
       <div className="sidebar-foot">
-        <ServerStatus />
         <div className="lang-switcher" data-testid="lang-switcher">
           <button 
             className={`lang-btn ${lang === 'nl' ? 'active' : ''}`}
