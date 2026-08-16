@@ -162,12 +162,26 @@ describe('useConversation hook', () => {
     });
 
     await act(async () => {
-      await result.current.send('Hello');
+      await result.current.send('What time zone are you usually working in?');
     });
 
+    expect(mockRetrieveRelevantContext).toHaveBeenCalled();
     const transcript = mockStream.mock.calls[0][0];
     const systemMessages = transcript.filter((m) => m.role === 'system');
     expect(systemMessages.length).toBe(1); // identity prompt only
+  });
+
+  test('skips recall entirely for a trivial message', async () => {
+    const { result } = renderHook(() => useConversation());
+    act(() => {
+      result.current.newConversation('seed');
+    });
+
+    await act(async () => {
+      await result.current.send('thanks');
+    });
+
+    expect(mockRetrieveRelevantContext).not.toHaveBeenCalled();
   });
 
   test('reflects on the turn after a successful response', async () => {

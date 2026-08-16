@@ -262,6 +262,21 @@ The next milestone introduces the first reflective layer: Hindsight. Gaia will b
 
 ---
 
+## Milestone 7a — Significance-Based Memory Policy
+
+**Goal.** Milestone 7 recalled and reflected on every single turn. The instruction that triggered this one asked whether that cadence could be made configurable — turn-count throttling ("every N messages") or something smarter. Went with smarter: gate both calls on whether the turn is actually worth them, per architecture.md §6's own language — "memory policies are explicit contracts... governed by declared policies, not by ad-hoc model behavior."
+
+**What was built.**
+- `frontend/src/gaia/state/memoryPolicy.js` — `shouldRecall(query)` and `shouldReflect(userText, assistantText)`. A message is trivial if it's empty, whole-message filler (`ok`, `thanks`, `hi`, …, matched only against the *entire* trimmed message, never as a substring), or under a length threshold. `shouldReflect` skips only when **both** sides of the exchange are trivial — asymmetric on purpose: a wrongly-skipped reflection silently loses a moment, a wrongly-kept one just costs a network call, so the policy leans toward keeping.
+- Thresholds are env-configurable (`REACT_APP_MEMORY_MIN_RECALL_LENGTH`, `REACT_APP_MEMORY_MIN_REFLECT_LENGTH`, default 12 chars), matching how every other provider setting in this codebase is exposed. There's no in-app settings UI yet, so this is literally what "a setting" means right now.
+- `memoryContext.js`'s `recallRelevantContext`/`reflectOnTurn` check the policy first. 15 new tests total; fixed a handful of existing tests that happened to use trivial-length fixture text (`'anything'`, `'What theme?'`) and would otherwise have started passing for the wrong reason (the gate skipping the provider call entirely, rather than the mocked success/failure path actually being exercised). Full frontend suite: 9 suites, 90 tests.
+
+**Why this is explicitly a stand-in, not a judgment.** "Is this significant" is, honestly, a Logos-level question — the same kind of call architecture.md §6.2 already assigns to Logos for hypotheses and patterns (judging relevance, deciding something matters). But there is no concrete Logos implementation to hand this to yet. Asking a model to judge significance would mean a second reasoning call per turn, which defeats the actual point of gating (saving latency and cost on trivial turns). So this is length/pattern matching — cheap, fast, and honestly labeled in its own docstring as a placeholder for a real judgment call that belongs elsewhere once Logos exists as more than a naming convention.
+
+**What this does not change.** Recall and reflection's own failure/timeout behavior (Milestone 7) is untouched — the policy is a gate in front of them, not a replacement for anything. Hindsight's own retain step still does its own (real) extraction judgment on whatever content passes the gate; this policy only decides whether to bother calling it at all.
+
+---
+
 ## Amendment — Identity: Attunement vs. Mimicry
 
 **Context.** Gaia was built and refined for a single user first. As the long-term intent to make Gaia available beyond that first relationship became explicit, a latent risk in the personality model surfaced: `personality.md` described Gaia's voice as adaptive — "her phrasing, framing, and register shift toward theirs." For one user, that reads as attentiveness. Generalized to many users, it is the exact mechanism by which Gaia would start to sound like whoever she's talking to, and lose the one thing SOUL exists to guarantee — that she is recognizably herself to everyone, always.

@@ -1,4 +1,5 @@
 import { getMemoryProvider } from '../integration/memory';
+import { shouldRecall, shouldReflect } from './memoryPolicy';
 
 const RECALL_TIMEOUT_MS = 4000;
 
@@ -7,13 +8,15 @@ const RECALL_TIMEOUT_MS = 4000;
  * never blocks the conversation for long — if Hindsight is slow or
  * unreachable, Gaia simply proceeds without recalled context, the same
  * "fails invisibly" contract HermesProvider follows for reasoning
- * (architecture.md §10, "Backpressure & failure").
+ * (architecture.md §10, "Backpressure & failure"). Skips the call entirely
+ * for turns memoryPolicy judges too trivial to be worth a lookup.
  *
  * @param {string} query
  * @returns {Promise<import('../../contracts/hindsight').Reflection[]>}
  */
 export async function recallRelevantContext(query) {
   if (!query || !query.trim()) return [];
+  if (!shouldRecall(query)) return [];
   try {
     const provider = getMemoryProvider();
     const signal = typeof AbortSignal !== 'undefined' && AbortSignal.timeout
@@ -53,11 +56,14 @@ export function renderMemoryContext(reflections) {
  * COMPLETE) and must never delay or fail a conversation. Failures are
  * swallowed; Hindsight's own retain extracts what's actually significant,
  * so passing the raw exchange is reflection, not logging, in practice.
+ * Skips the call entirely when memoryPolicy judges the whole exchange too
+ * trivial to be worth writing — see memoryPolicy.js for what that means.
  *
  * @param {{ conversationId: string, userText: string, assistantText: string, assistantMessageId: string }} turn
  */
 export function reflectOnTurn({ conversationId, userText, assistantText, assistantMessageId }) {
   if (!userText || !assistantText) return;
+  if (!shouldReflect(userText, assistantText)) return;
   const provider = getMemoryProvider();
   provider.storeReflection({
     domain: 'context',

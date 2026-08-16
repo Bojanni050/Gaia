@@ -24,14 +24,20 @@ describe('recallRelevantContext', () => {
 
   test('returns the provider result on success', async () => {
     mockRetrieveRelevantContext.mockResolvedValue([{ id: 'r1', summary: 'x' }]);
-    const result = await recallRelevantContext('what does Bo prefer');
+    const result = await recallRelevantContext('what does Bo prefer for a theme');
     expect(result).toEqual([{ id: 'r1', summary: 'x' }]);
   });
 
   test('returns [] when the provider throws (never breaks the conversation)', async () => {
     mockRetrieveRelevantContext.mockRejectedValue(new Error('unreachable'));
-    const result = await recallRelevantContext('anything');
+    const result = await recallRelevantContext('anything relevant to tonight');
     expect(result).toEqual([]);
+  });
+
+  test('skips the provider call for a trivial (filler) query', async () => {
+    const result = await recallRelevantContext('thanks');
+    expect(result).toEqual([]);
+    expect(mockRetrieveRelevantContext).not.toHaveBeenCalled();
   });
 });
 
@@ -70,23 +76,35 @@ describe('reflectOnTurn', () => {
 
   test('stores a reflection combining both sides of the turn with provenance', () => {
     reflectOnTurn({
-      conversationId: 'c1', userText: 'What theme?', assistantText: 'Dark mode.', assistantMessageId: 'm1',
+      conversationId: 'c1',
+      userText: 'What theme should I use tonight?',
+      assistantText: 'Dark mode suits how you described the room.',
+      assistantMessageId: 'm1',
     });
 
     expect(mockStoreReflection).toHaveBeenCalledTimes(1);
     const [reflection] = mockStoreReflection.mock.calls[0];
     expect(reflection.domain).toBe('context');
-    expect(reflection.summary).toContain('What theme?');
-    expect(reflection.summary).toContain('Dark mode.');
+    expect(reflection.summary).toContain('What theme should I use tonight?');
+    expect(reflection.summary).toContain('Dark mode suits how you described the room.');
     expect(reflection.provenance).toMatchObject({ conversation_id: 'c1', source_message_id: 'm1' });
+  });
+
+  test('skips storing when the whole exchange is trivial', () => {
+    reflectOnTurn({ conversationId: 'c1', userText: 'thanks', assistantText: "you're welcome", assistantMessageId: 'm1' });
+    expect(mockStoreReflection).not.toHaveBeenCalled();
   });
 
   test('does not throw when the provider rejects (fire-and-forget)', async () => {
     mockStoreReflection.mockRejectedValue(new Error('unreachable'));
     expect(() => reflectOnTurn({
-      conversationId: 'c1', userText: 'x', assistantText: 'y', assistantMessageId: 'm1',
+      conversationId: 'c1',
+      userText: 'I always work better after midnight',
+      assistantText: "Good to know, I'll keep that in mind.",
+      assistantMessageId: 'm1',
     })).not.toThrow();
     await Promise.resolve();
     await Promise.resolve();
+    expect(mockStoreReflection).toHaveBeenCalledTimes(1);
   });
 });
