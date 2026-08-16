@@ -3,6 +3,7 @@ import { getReasoningProvider } from '../integration/reasoning';
 import { FoundationEngine } from '../foundation';
 import { phraseReasoningError } from '../presence/errorPhrases';
 import { recallRelevantContext, renderMemoryContext, reflectOnTurn } from './memoryContext';
+import { deriveIntent } from './intentIQ';
 
 const emptyStream = { active: false, messageId: null, content: '', reasoning: '', presence: 'quiet' };
 const PRESENCE_THINKING = 'thinking';
@@ -268,7 +269,7 @@ function latestUserText(messages) {
  * Hindsight is unreachable.
  */
 async function assembleTranscript(messages) {
-  const context = deriveContext(messages);
+  const context = deriveIntent(messages);
   const userText = latestUserText(messages);
   const reflections = await recallRelevantContext(userText);
   const memoryBlock = renderMemoryContext(reflections);
@@ -280,30 +281,4 @@ async function assembleTranscript(messages) {
     transcript: buildTranscript([...systemMessages, ...messages]),
     userText,
   };
-}
-
-function deriveContext(messages) {
-  // Simple heuristic based on the entire conversation text so far
-  const fullText = messages.map(m => m.content).join(' ').toLowerCase();
-  
-  if (
-    fullText.includes('implement') || 
-    fullText.includes('refactor') || 
-    fullText.includes('architecture') || 
-    fullText.includes('prompt') || 
-    fullText.includes('code')
-  ) {
-    return { type: 'technical' };
-  }
-  
-  if (
-    fullText.includes('why did you answer like that') || 
-    fullText.includes('what are your principles') || 
-    fullText.includes('how do you think') || 
-    fullText.includes('evolution')
-  ) {
-    return { type: 'gaia' };
-  }
-  
-  return { type: 'conversation' };
 }

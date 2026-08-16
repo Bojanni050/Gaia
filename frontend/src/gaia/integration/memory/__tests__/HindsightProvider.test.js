@@ -35,12 +35,12 @@ describe('HindsightProvider', () => {
   });
 
   describe('configuration', () => {
-    test('uses sensible defaults when no config is provided', () => {
+    test('uses sensible relative (same-origin, proxied) defaults when no config is provided', () => {
       const p = new HindsightProvider();
-      expect(p.baseUrl).toBe('http://100.64.144.93:8888');
+      expect(p.baseUrl).toBe('/api/hindsight');
       expect(p.bankId).toBe('gaia');
       expect(p.apiKey).toBe('');
-      expect(p.cognitionUrl).toBe('http://100.64.144.93:8890');
+      expect(p.cognitionUrl).toBe('/api/cognition');
     });
 
     test('honors explicit configuration', () => {

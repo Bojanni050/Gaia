@@ -14,21 +14,29 @@ import { MemoryUnavailableError, MemoryNotFoundError, HypothesisTransitionError 
  * which is too slow to block a conversational turn on, matching the
  * asynchronous REFLECT step in the streaming lifecycle (architecture.md §10).
  *
- * Default URL targets Hindsight over Tailscale, not the public internet —
- * this deployment is intentionally not exposed publicly. Override with
- * REACT_APP_HINDSIGHT_URL. Override the bank with REACT_APP_HINDSIGHT_BANK_ID.
+ * Default URLs are relative (/api/hindsight, /api/cognition), proxied
+ * same-origin — same pattern as Hermes's default /api/hermes. Hindsight and
+ * the cognition service send no CORS headers at all (confirmed against
+ * Hindsight's own OpenAPI-described behavior: an OPTIONS preflight 405s),
+ * so a browser calling them cross-origin is always blocked; same-origin
+ * proxying isn't a style choice here, it's the only way this works in a
+ * browser. In dev, craco.config.js proxies these paths to the real
+ * Tailscale addresses; in production, nginx.conf does. Override with
+ * REACT_APP_HINDSIGHT_URL / REACT_APP_COGNITION_URL for a direct
+ * (non-browser, e.g. Node/testing) connection. Override the bank with
+ * REACT_APP_HINDSIGHT_BANK_ID.
  */
 export class HindsightProvider extends MemoryProvider {
   constructor(config = {}) {
     super(config);
-    this.baseUrl = (config.baseUrl || process.env.REACT_APP_HINDSIGHT_URL || 'http://100.64.144.93:8888')
+    this.baseUrl = (config.baseUrl || process.env.REACT_APP_HINDSIGHT_URL || '/api/hindsight')
       .replace(/\/+$/, '');
     this.bankId = config.bankId || process.env.REACT_APP_HINDSIGHT_BANK_ID || 'gaia';
     this.apiKey = config.apiKey || process.env.REACT_APP_HINDSIGHT_API_KEY || '';
     // Patterns and hypotheses (architecture.md §6.1) have nowhere to live in
     // Hindsight's own API — this is Gaia's own cognition service (see
     // services/cognition), Hindsight-adjacent, not Hindsight itself.
-    this.cognitionUrl = (config.cognitionUrl || process.env.REACT_APP_COGNITION_URL || 'http://100.64.144.93:8890')
+    this.cognitionUrl = (config.cognitionUrl || process.env.REACT_APP_COGNITION_URL || '/api/cognition')
       .replace(/\/+$/, '');
   }
 

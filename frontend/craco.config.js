@@ -124,6 +124,29 @@ let webpackConfig = {
 };
 
 webpackConfig.devServer = (devServerConfig) => {
+  // Hindsight and services/cognition send no CORS headers at all (an
+  // OPTIONS preflight against Hindsight 405s), so the browser blocks any
+  // direct cross-origin call to them. HindsightProvider defaults to
+  // relative paths (/api/hindsight, /api/cognition) for exactly this
+  // reason; this proxies those paths to the real Tailscale addresses in
+  // dev, same as nginx.conf does in production. Reachability still
+  // requires this machine to be on the tailnet.
+  devServerConfig.proxy = [
+    ...(devServerConfig.proxy || []),
+    {
+      context: ['/api/hindsight'],
+      target: process.env.HINDSIGHT_PROXY_TARGET || 'http://100.64.144.93:8888',
+      changeOrigin: true,
+      pathRewrite: { '^/api/hindsight': '' },
+    },
+    {
+      context: ['/api/cognition'],
+      target: process.env.COGNITION_PROXY_TARGET || 'http://100.64.144.93:8890',
+      changeOrigin: true,
+      pathRewrite: { '^/api/cognition': '' },
+    },
+  ];
+
   // Add health check endpoints if enabled
   if (config.enableHealthCheck && setupHealthEndpoints && healthPluginInstance) {
     const originalSetupMiddlewares = devServerConfig.setupMiddlewares;
