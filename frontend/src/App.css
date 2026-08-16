@@ -86,7 +86,6 @@
   align-items: flex-start; justify-content: center; gap: 20px;
 }
 .welcome-title { font-family: var(--serif); font-size: 2.6rem; font-weight: 500; margin: 6px 0 0; letter-spacing: -0.01em; }
-.welcome-sub { color: var(--text-muted); font-size: 1.05rem; line-height: 1.7; max-width: 440px; margin: 0; }
 
 /* messages */
 .message { padding: 16px 0; }

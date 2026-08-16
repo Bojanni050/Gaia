@@ -75,14 +75,6 @@ export default function Conversation({
               >
                 {greeting.title}
               </motion.h1>
-              <motion.p
-                className="welcome-sub"
-                initial={{ opacity: 0, y: 12 }}
-                animate={{ opacity: 1, y: 0 }}
-                transition={{ duration: 1.0, delay: 1.15, ease: 'easeOut' }}
-              >
-                {greeting.sub}
-              </motion.p>
             </div>
           ) : (
             <>

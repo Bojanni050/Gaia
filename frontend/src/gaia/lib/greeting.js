@@ -13,19 +13,10 @@ export function getGreeting() {
 
   if (firstArrival) {
     localStorage.setItem('gaia.arrived', new Date().toISOString());
-    if (currentLang === 'nl') {
-      return {
-        title: "Hallo. Ik ben Gaia.",
-        sub: "Een plek om samen na te denken, te beslissen en te creëren — door de tijd heen. Ik onthoud wat belangrijk is en blijf stil als dat niet zo is.",
-        first: true,
-      };
-    } else {
-      return {
-        title: "Hello. I'm Gaia.",
-        sub: "A place to think, decide, and create — together, over time. I'll remember what matters and stay quiet when it doesn't.",
-        first: true,
-      };
-    }
+    return {
+      title: currentLang === 'nl' ? "Hallo. Ik ben Gaia." : "Hello. I'm Gaia.",
+      first: true,
+    };
   }
 
   const h = new Date().getHours();
@@ -42,26 +33,9 @@ export function getGreeting() {
       : `Good evening, ${NAME}.`;
   }
 
-  let title, sub;
-  if (currentLang === 'nl') {
-    title = pick([timed, timed, 'Welkom terug.', 'Fijn om je weer te zien.', `Klaar om verder te gaan, ${NAME}?`]);
-    sub = pick([
-      "Wanneer je er klaar voor bent.",
-      "Neem je tijd — ik ben hier.",
-      "Wat houdt je bezig?",
-      "We kunnen de draad oppakken waar je maar wilt.",
-      "Geen haast. We denken op jouw tempo.",
-    ]);
-  } else {
-    title = pick([timed, timed, 'Welcome back.', 'Nice to see you again.', `Ready to continue, ${NAME}?`]);
-    sub = pick([
-      "Whenever you're ready.",
-      "Take your time — I'm here.",
-      "What's on your mind?",
-      "We can pick up wherever you like.",
-      "No rush. We think at your pace.",
-    ]);
-  }
+  const title = currentLang === 'nl'
+    ? pick([timed, timed, 'Welkom terug.', 'Fijn om je weer te zien.', `Klaar om verder te gaan, ${NAME}?`])
+    : pick([timed, timed, 'Welcome back.', 'Nice to see you again.', `Ready to continue, ${NAME}?`]);
 
-  return { title, sub, first: false };
+  return { title, first: false };
 }
