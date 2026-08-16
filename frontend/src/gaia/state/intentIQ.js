@@ -1,18 +1,22 @@
 /**
- * intentIQ — Gaia's local, heuristic intent classifier.
+ * LEGACY local heuristic — NOT Logos's semantic intentIQ.
  *
- * Logos's intentIQ faculty (architecture.md §4.2) reads a turn and decides
- * what it's really asking for. This is the smallest honest version of that:
- * fast, local, no extra model round-trip. It picks which foundation
- * documents (foundation/rules.js) accompany a turn — not a full reasoning
- * profile (orchestrator.md's Calm/Creative/Technical/Analytical/Playful);
- * nothing in this codebase consumes that vocabulary yet, so introducing it
- * here would be unused surface, not a real capability.
+ * The real, Logos-level intentIQ now lives at gaia/logos/intentIQ (an LLM
+ * call through the generic reasoning-provider abstraction, schema-validated
+ * into an IntentDecision — see gaia/logos/intentIQ/intentIQ.js). This
+ * module predates it and remains only as a fast, synchronous, zero-latency
+ * local context hint: it picks which foundation documents
+ * (foundation/rules.js) accompany a turn, a narrower and cheaper job than a
+ * full IntentDecision. Nothing in this codebase treats this module's output
+ * as Gaia's understanding of user intent anymore — that responsibility
+ * belongs to gaia/logos.
  *
- * Like memoryPolicy.js, this is explicitly a heuristic stand-in, not a
- * reasoning judgment — a real intentIQ would understand intent, not pattern
- * match for it. This exists so the seam is real and something can improve
- * behind it later without every caller changing.
+ * Kept deliberately simple: pattern matching over the last few user turns,
+ * no reasoning, no model call. useConversation.js still calls deriveIntent()
+ * synchronously for Foundation selection because that selection has to
+ * happen before the transcript is sent, cheaply; it separately calls
+ * gaia/logos's interpretIntent() for the real decision (currently
+ * dev-logged only — see useConversation.js).
  */
 
 const boundary = (word) => new RegExp(`\\b${word}\\b`, 'i');

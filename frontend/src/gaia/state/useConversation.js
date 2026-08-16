@@ -4,6 +4,7 @@ import { FoundationEngine } from '../foundation';
 import { phraseReasoningError } from '../presence/errorPhrases';
 import { recallRelevantContext, renderMemoryContext, reflectOnTurn } from './memoryContext';
 import { deriveIntent } from './intentIQ';
+import { interpretIntent } from '../logos';
 
 const emptyStream = { active: false, messageId: null, content: '', reasoning: '', presence: 'quiet' };
 const PRESENCE_THINKING = 'thinking';
@@ -17,6 +18,22 @@ function titleFrom(text) {
   const t = (text || '').trim();
   if (!t) return 'A new page';
   return t.split(/\s+/).slice(0, 7).join(' ').slice(0, 60);
+}
+
+/**
+ * Development-only visibility into Logos's IntentDecision. This milestone
+ * establishes the intentIQ seam (user message → IntentIQ → validated
+ * IntentDecision → existing Gaia response flow) without changing routing or
+ * the response itself — see docs/evolution.md. Fire-and-forget: intentIQ
+ * never throws (gaia/logos/intentIQ/intentIQ.js fails safe internally), and
+ * this must never affect or delay the conversation.
+ */
+function logIntentDecisionForDev(messages) {
+  if (process.env.NODE_ENV === 'production') return;
+  interpretIntent(messages).then((decision) => {
+    // eslint-disable-next-line no-console
+    console.debug('[Logos:intentIQ]', decision);
+  });
 }
 
 /**
@@ -169,7 +186,9 @@ export function useConversation() {
     });
 
     const currentConvMessages = byConv[convId] || [];
-    const { transcript, userText: recalledFor } = await assembleTranscript([...currentConvMessages, newMsg]);
+    const turnSoFar = [...currentConvMessages, newMsg];
+    logIntentDecisionForDev(turnSoFar);
+    const { transcript, userText: recalledFor } = await assembleTranscript(turnSoFar);
 
     await runStream(convId, transcript, recalledFor);
   }, [activeId, byConv, newConversation, runStream]);
