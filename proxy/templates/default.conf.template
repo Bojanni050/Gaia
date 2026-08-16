@@ -5,6 +5,14 @@ server {
     proxy_http_version 1.1;
     proxy_set_header Host $host;
     proxy_set_header Authorization "Bearer ${HERMES_AUTH_TOKEN}";
+    # hermes-agent rejects any request carrying an Origin header at all
+    # (confirmed: even Origin values matching its own declared localhost/
+    # 127.0.0.1 allowlist get a 403 — this isn't a mismatch check, it's a
+    # blunter "no Origin at all on this endpoint" guard, deliberately: it's
+    # meant to be called by non-browser API clients). The real caller
+    # hermes-agent sees here is this proxy, not the browser, so it's
+    # correct to not forward the browser's Origin upstream at all.
+    proxy_set_header Origin "";
     proxy_buffering off;
     proxy_request_buffering off;
     proxy_read_timeout 3600s;
