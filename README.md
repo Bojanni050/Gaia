@@ -3,6 +3,8 @@ A lifelong personal intelligence.
 
 Gaia is a conversation-first personal intelligence built around identity, understanding and continuity rather than a single AI model.
 
+> **This repository is the dev version of Gaia Cloud.** It currently also contains her frontend (`frontend/`, deployed as `gaia-web`). That frontend will later be moved out into a separate `gaia-desktop` client, once Gaia Cloud has its own proper service boundary (see `docs/evolution.md` for the current, explicitly-flagged interim state — e.g. Logos's `intentIQ`/`reasonIQ` still executing client-side).
+
 ## Core Principles
 
 - Identity is permanent.
