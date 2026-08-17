@@ -3,6 +3,7 @@ name: deploy
 on:
   push:
     branches: [main]
+  workflow_dispatch: {}
 
 jobs:
   test:
@@ -23,13 +24,18 @@ jobs:
   deploy:
     needs: test
     runs-on: ubuntu-latest
+    timeout-minutes: 15
     steps:
       - name: Deploy gaia-api on the VPS
         uses: appleboy/ssh-action@v1.2.2
         with:
+          # The VPS's public IPv4 — SSH is exposed there, same pattern as
+          # MelodIQ. Services stay Tailscale-bound; only this deploy hop is
+          # public.
           host: ${{ secrets.DEPLOY_HOST }}
           username: ${{ secrets.DEPLOY_USER }}
           key: ${{ secrets.DEPLOY_SSH_KEY }}
+          command_timeout: 10m
           # reset --hard keeps the checkout identical to origin; .env files
           # are gitignored and therefore untouched.
           script: |
@@ -39,3 +45,5 @@ jobs:
             git reset --hard origin/main
             cd services/gaia-api
             docker compose up -d --build
+            docker image prune -f
+            docker compose ps
