@@ -1,0 +1,41 @@
+name: deploy
+
+on:
+  push:
+    branches: [main]
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: services/gaia-api
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+          cache-dependency-path: services/gaia-api/package-lock.json
+      - run: npm ci
+      - run: npm test
+
+  deploy:
+    needs: test
+    runs-on: ubuntu-latest
+    steps:
+      - name: Deploy gaia-api on the VPS
+        uses: appleboy/ssh-action@v1.2.2
+        with:
+          host: ${{ secrets.DEPLOY_HOST }}
+          username: ${{ secrets.DEPLOY_USER }}
+          key: ${{ secrets.DEPLOY_SSH_KEY }}
+          # reset --hard keeps the checkout identical to origin; .env files
+          # are gitignored and therefore untouched.
+          script: |
+            set -e
+            cd /root/gaia
+            git fetch --all
+            git reset --hard origin/main
+            cd services/gaia-api
+            docker compose up -d --build
