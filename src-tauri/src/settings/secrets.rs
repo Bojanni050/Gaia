@@ -30,3 +30,20 @@ pub fn load_token() -> Option<String> {
     let entry = Entry::new(SERVICE, ACCOUNT).ok()?;
     entry.get_password().ok()
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    /// Guards against the keyring mock-store trap: without the platform
+    /// feature, `set_password` "succeeds" while storing nothing, which once
+    /// silently destroyed the only copy of the token. A real store must
+    /// round-trip.
+    #[test]
+    fn token_round_trips_through_the_real_store() {
+        store_token(Some("round-trip-probe")).expect("store must succeed");
+        assert_eq!(load_token().as_deref(), Some("round-trip-probe"));
+        store_token(None).expect("delete must succeed");
+        assert_eq!(load_token(), None);
+    }
+}
