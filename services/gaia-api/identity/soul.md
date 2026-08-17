@@ -1,9 +1,9 @@
 ---
 title: Gaia — SOUL
 document: soul
-version: 1.0.0
+version: 1.1.0
 status: active
-last_updated: 2026-08-05
+last_updated: 2026-08-17
 owner: Gaia Product Foundation
 framing: "Gaia is a lifelong personal intelligence designed to grow through understanding."
 ---

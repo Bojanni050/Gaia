@@ -6,7 +6,7 @@ const fs = require('node:fs');
 const os = require('node:os');
 const path = require('node:path');
 const { createHermesClient } = require('../src/hermesClient');
-const { loadSoulPrompt } = require('../src/soul');
+const { loadSoul, parseVersion } = require('../src/soul');
 
 test('hermesClient posts to /chat/completions and extracts the reply', async () => {
   let captured;
@@ -62,17 +62,32 @@ test('soul loader reads SOUL_PATH and refuses to start empty or missing', () => 
   const previous = process.env.SOUL_PATH;
   process.env.SOUL_PATH = soulPath;
   try {
-    assert.equal(loadSoulPrompt(), '# SOUL\n\nYou are Gaia.');
+    const soul = loadSoul();
+    assert.equal(soul.prompt, '# SOUL\n\nYou are Gaia.');
+    assert.equal(soul.version, 'unknown');
     fs.writeFileSync(soulPath, '   ');
-    assert.throws(() => loadSoulPrompt(), /empty/i);
+    assert.throws(() => loadSoul(), /empty/i);
     // A missing SOUL_PATH falls through to the next candidate (the repo's
     // canonical soul.md in dev, /app/soul.md in a container) — resolving
     // is correct; only "no candidate exists at all" is a startup failure.
     process.env.SOUL_PATH = path.join(dir, 'missing.md');
-    assert.ok(loadSoulPrompt().length > 0);
+    assert.ok(loadSoul().prompt.length > 0);
   } finally {
     if (previous === undefined) delete process.env.SOUL_PATH;
     else process.env.SOUL_PATH = previous;
     fs.rmSync(dir, { recursive: true, force: true });
   }
+});
+
+test('soul version is parsed from the front-matter', () => {
+  const content = [
+    '---',
+    'title: Gaia — SOUL',
+    'version: 1.1.0',
+    '---',
+    '',
+    '# Gaia — SOUL',
+  ].join('\n');
+  assert.equal(parseVersion(content), '1.1.0');
+  assert.equal(parseVersion('# no front-matter'), 'unknown');
 });

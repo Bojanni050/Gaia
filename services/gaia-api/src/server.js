@@ -4,7 +4,8 @@
  * The Gaia API — where first-class clients reach Gaia.
  *
  * Contract (kept in lockstep with the desktop's `conversation/turn` seam):
- *   GET  /health             → { ok: true }          (also GET /)
+ *   GET  /health             → { ok: true, soulVersion: string }
+ *   GET  /soul               → { version: string }   (identity version only)
  *   POST /conversation/turn  → { reply: string }     (auth required)
  *
  * Everything cognitive lives here or behind Hermes; clients send plain
@@ -15,12 +16,13 @@ const express = require('express');
 const { parseTokens, createAuthMiddleware } = require('./auth');
 const { createHermesClient } = require('./hermesClient');
 const { performTurn } = require('./turn');
-const { loadSoulPrompt } = require('./soul');
+const { loadSoul } = require('./soul');
 
 const PORT = Number(process.env.PORT || 8891);
 
 function createApp(env = process.env) {
-  const systemPrompt = loadSoulPromptWithEnv(env);
+  const soul = loadSoulWithEnv(env);
+  const systemPrompt = soul.prompt;
   const hermes = createHermesClient({
     baseUrl: env.HERMES_BASE_URL,
     model: env.HERMES_MODEL || 'hermes-agent',
@@ -40,9 +42,13 @@ function createApp(env = process.env) {
     next();
   });
 
-  const health = (req, res) => res.json({ ok: true });
+  const health = (req, res) => res.json({ ok: true, soulVersion: soul.version });
   app.get('/health', health);
   app.get('/', health);
+
+  // Identity version only — clients observe which SOUL they're talking to;
+  // the constitution itself stays server-side.
+  app.get('/soul', (req, res) => res.json({ version: soul.version }));
 
   app.post('/conversation/turn', auth, async (req, res) => {
     const messages = req.body && req.body.messages;
@@ -62,18 +68,18 @@ function createApp(env = process.env) {
 }
 
 // Split so tests can inject env without touching process.env.
-function loadSoulPromptWithEnv(env) {
+function loadSoulWithEnv(env) {
   if (env.SOUL_PATH !== undefined && env !== process.env) {
     const previous = process.env.SOUL_PATH;
     if (env.SOUL_PATH) process.env.SOUL_PATH = env.SOUL_PATH;
     try {
-      return loadSoulPrompt();
+      return loadSoul();
     } finally {
       if (previous === undefined) delete process.env.SOUL_PATH;
       else process.env.SOUL_PATH = previous;
     }
   }
-  return loadSoulPrompt();
+  return loadSoul();
 }
 
 if (require.main === module) {

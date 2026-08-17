@@ -2,10 +2,11 @@ import fs from 'fs';
 import path from 'path';
 
 // soul.md's canonical source is the identity layer, not docs/ (docs/soul.md is
-// an architectural overview of SOUL, not the constitution itself). Every other
-// foundation document lives in docs/.
+// an architectural overview of SOUL, not the constitution itself). The
+// constitution is owned by Gaia Cloud (services/gaia-api/identity); every
+// other foundation document lives in docs/.
 const IDENTITY_OVERRIDES: Record<string, string> = {
-  'soul.md': path.join('frontend', 'src', 'gaia', 'identity', 'soul.md'),
+  'soul.md': path.join('services', 'gaia-api', 'identity', 'soul.md'),
 };
 
 /**

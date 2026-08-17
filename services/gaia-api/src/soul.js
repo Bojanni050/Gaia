@@ -1,21 +1,22 @@
 'use strict';
 
 /**
- * SOUL loading — server-side identity.
+ * SOUL — Gaia's constitution, owned here (Gaia Cloud) and versioned.
  *
- * Since Milestone 8 the desktop client carries no identity; this service is
- * where the constitution is read. One canonical source (the repo's
- * `soul.md`), resolved from a list of candidate paths so dev (repo layout)
- * and container (baked-in copy) both work. Missing SOUL is a hard startup
- * failure: a Gaia without her constitution must not speak.
+ * The desktop carries no identity; this service is where the constitution
+ * is read. The canonical document lives in `identity/soul.md` next to this
+ * service, is baked into the image, and carries a `version` field that the
+ * API surfaces so clients can observe which identity they are talking to.
+ * Missing or empty SOUL is a hard startup failure: a Gaia without her
+ * constitution must not speak.
  */
 const fs = require('fs');
 const path = require('path');
 
 const CANDIDATES = [
   () => process.env.SOUL_PATH,
-  // Dev: services/gaia-api/src → repo root → the canonical constitution.
-  () => path.resolve(__dirname, '../../../frontend/src/gaia/identity/soul.md'),
+  // Dev: services/gaia-api/src → services/gaia-api/identity/soul.md
+  () => path.resolve(__dirname, '../identity/soul.md'),
   // Container: baked in next to the app by the Dockerfile.
   () => '/app/soul.md',
 ];
@@ -28,7 +29,16 @@ function resolveSoulPath() {
   return null;
 }
 
-function loadSoulPrompt() {
+function parseVersion(content) {
+  const match = /^version:\s*(\S+)\s*$/m.exec(content);
+  return match ? match[1] : 'unknown';
+}
+
+/**
+ * Loads the constitution and its version.
+ * @returns {{ prompt: string, version: string }}
+ */
+function loadSoul() {
   const resolved = resolveSoulPath();
   if (!resolved) {
     throw new Error(
@@ -39,7 +49,7 @@ function loadSoulPrompt() {
   if (!prompt) {
     throw new Error(`SOUL is empty (${resolved}). Refusing to start without identity.`);
   }
-  return prompt;
+  return { prompt, version: parseVersion(prompt) };
 }
 
-module.exports = { loadSoulPrompt, resolveSoulPath };
+module.exports = { loadSoul, parseVersion, resolveSoulPath };

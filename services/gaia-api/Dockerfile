@@ -14,7 +14,7 @@ COPY services/gaia-api/package.json ./package.json
 RUN npm install --omit=dev
 
 COPY services/gaia-api/src ./src
-COPY frontend/src/gaia/identity/soul.md ./soul.md
+COPY services/gaia-api/identity/soul.md ./soul.md
 
 ENV SOUL_PATH=/app/soul.md
 EXPOSE 8891
