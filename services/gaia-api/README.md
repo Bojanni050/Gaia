@@ -59,3 +59,10 @@ Desktop clients then configure (Settings → Gaia Cloud):
 network (`hermes-agent_default`); this service joins that network in
 `docker-compose.yml` exactly like `gaia-hermes-proxy` does. The Tailscale
 IP does **not** expose Hermes — don't use `100.64.144.93:8642`.
+
+> **Shared secret — rotate in both places.** `HERMES_AUTH_TOKEN` is the
+> same token `gaia-hermes-proxy` injects when *it* talks to hermes-agent
+> (`proxy/templates/default.conf.template`). It lives untracked in two
+> `.env` files on the VPS: `proxy/.env` and this service's `.env`. If you
+> rotate it, update **both**, then restart `gaia-hermes-proxy` and
+> `gaia-api` — otherwise one of them starts getting `401` from hermes.

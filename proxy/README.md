@@ -19,3 +19,9 @@ an untracked `.env` on the VPS (`/root/gaia/proxy/.env`, gitignored, never
 committed) and pass it via `env_file` / `--env-file` when running the
 container. See `docs/evolution.md` (the amendment on this proxy) for how
 it's deployed.
+
+> **Shared secret — rotate in both places.** `gaia-api` talks to
+> hermes-agent directly and uses the *same* token (`services/gaia-api/.env`).
+> If you rotate it, update **both** `.env` files, then restart
+> `gaia-hermes-proxy` and `gaia-api` — otherwise one of them starts getting
+> `401` from hermes.
