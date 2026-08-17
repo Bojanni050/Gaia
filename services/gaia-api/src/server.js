@@ -31,6 +31,15 @@ function createApp(env = process.env) {
   const app = express();
   app.use(express.json());
 
+  // Request log — server-side only, so failures are diagnosable without
+  // leaking anything to clients.
+  app.use((req, res, next) => {
+    res.on('finish', () => {
+      console.log(`${req.method} ${req.path} -> ${res.statusCode}`);
+    });
+    next();
+  });
+
   const health = (req, res) => res.json({ ok: true });
   app.get('/health', health);
   app.get('/', health);

@@ -26,10 +26,13 @@ function createHermesClient({ baseUrl, model, authToken, fetchImpl = fetch, time
         body: JSON.stringify({ model, stream: false, messages }),
         signal: AbortSignal.timeout(timeoutMs),
       });
-    } catch (_) {
+    } catch (error) {
+      // Server-side diagnostic only; the client still gets a calm error.
+      console.error(`[hermes] unreachable at ${root}: ${error.message}`);
       throw new Error('hermes unreachable');
     }
     if (!response.ok) {
+      console.error(`[hermes] responded ${response.status} at ${root}`);
       throw new Error(`hermes responded with an error`);
     }
 
@@ -37,12 +40,14 @@ function createHermesClient({ baseUrl, model, authToken, fetchImpl = fetch, time
     try {
       data = await response.json();
     } catch (_) {
+      console.error(`[hermes] unreadable response at ${root}`);
       throw new Error('hermes returned an unreadable response');
     }
     const content = data && data.choices && data.choices[0] && data.choices[0].message
       ? data.choices[0].message.content
       : undefined;
     if (typeof content !== 'string' || content.length === 0) {
+      console.error(`[hermes] no content in response at ${root}: ${JSON.stringify(data).slice(0, 200)}`);
       throw new Error('hermes returned no content');
     }
     return content;
