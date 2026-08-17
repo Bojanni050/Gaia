@@ -15,3 +15,14 @@ services:
       # reachable from the tailnet (desktop clients live there), never
       # exposed to the open internet. Auth is the bearer token.
       - "100.64.144.93:8891:8891"
+    networks:
+      - default
+      - hermes_net
+
+networks:
+  hermes_net:
+    # hermes-agent binds only to its own docker network; gaia-api reaches
+    # it by container name (http://hermes:8642/v1), exactly like
+    # gaia-hermes-proxy does. Attach to that same external network.
+    external: true
+    name: hermes-agent_default

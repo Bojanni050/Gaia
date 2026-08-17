@@ -51,3 +51,11 @@ Desktop clients then configure (Settings → Gaia Cloud):
 
 - **Server URL:** `http://100.64.144.93:8891`
 - **Auth token:** one of the `GAIA_API_TOKEN` values
+
+## Reaching Hermes
+
+`HERMES_BASE_URL` must point at hermes-agent **by container name**
+(`http://hermes:8642/v1`). hermes-agent binds only to its own docker
+network (`hermes-agent_default`); this service joins that network in
+`docker-compose.yml` exactly like `gaia-hermes-proxy` does. The Tailscale
+IP does **not** expose Hermes — don't use `100.64.144.93:8642`.
