@@ -67,7 +67,7 @@ This document records the current monorepo boundaries and the plan for splitting
 
 ### Phase 1 — `Gaia-Cloud`
 
-**Moves:** `services/cognition/`, `proxy/`, `nginx.conf` (API gateway config), deployment compose/docs, and `docs/` (the constitution — identity belongs to Gaia herself, not to a client).
+**Moves:** `services/cognition/`, `services/gaia-api/` (the first real piece of the uniform Gaia API — `conversation/turn`, server-side SOUL, token auth), `proxy/`, `nginx.conf` (API gateway config), deployment compose/docs, and `docs/` (the constitution — identity belongs to Gaia herself, not to a client).
 
 **Recommended decision:** define the `/api/*` surface in `nginx.conf` explicitly as *the Gaia Cloud API gateway* and document its routes as the contract. Publish from CI:
 

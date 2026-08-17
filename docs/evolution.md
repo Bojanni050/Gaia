@@ -543,6 +543,28 @@ The actual constitution — the "You are Gaia…" document with her character, c
 
 ---
 
+## Milestone 9 — The Gaia API: Gaia Answers from the Server Side
+
+**Goal.** Milestone 8 left Desktop with its own face but nobody to talk to — the `conversation/turn` contract had no server side. This milestone builds it: `services/gaia-api`, the first piece of the real Gaia Cloud, implementing exactly the seam Desktop declares. One Gaia, multiple clients, and now a server for them to share.
+
+**What was built.**
+
+- **`services/gaia-api`** (Express, Node 22) — `POST /conversation/turn` (auth required) and `GET /health`. In: `{ messages }`, out: `{ reply }`. Non-streaming this phase; the streaming variant grows behind the same path — the desktop's `ServerEvent` seam is already waiting.
+- **Server-side identity.** SOUL is loaded at startup from the repository's canonical `frontend/src/gaia/identity/soul.md` (baked into the Docker image; `SOUL_PATH` overrides) and prepended to every Hermes call. Missing or empty SOUL is a hard startup failure — a Gaia without her constitution must not speak. This is the first time identity has lived server-side since the dev-stub; now it belongs to Gaia Cloud, where architecture.md always put it.
+- **Hermes orchestration server-side.** The API is the only place Hermes' URL, model and token exist in this path; the desktop holds just its own Gaia API token. Error responses are calm sentences — no provider names, no upstream status codes (tested).
+- **Bearer-token auth, fail closed.** Comma-separated `GAIA_API_TOKEN` (one per client/device is the intended pattern); no token configured = every authenticated route refuses (503), wrong token = 401.
+- **Deployment** follows the Hindsight/cognition posture: Tailscale-only binding (`100.64.144.93:8891`), untracked `.env`, docker-compose with repo-root build context so the image bakes in the canonical soul.md.
+- **Desktop secret storage.** The auth token moved from `settings.json` to the OS credential store (Windows Credential Manager / macOS Keychain / session keyring) via `keyring`. On first launch any in-file token migrates automatically; saves strip the token from the file, and a keyring failure falls back to the legacy in-file behaviour rather than breaking settings.
+- 15 backend tests (`node --test`): turn assembly (SOUL prepended exactly once, client fields stripped), validation, calm error mapping (asserting no `hermes`/port leakage), auth fail-closed/401/pass, hermes client contract, SOUL loader.
+
+**How Desktop uses it.** Settings → Gaia Cloud: Server URL `http://100.64.144.93:8891` (tailnet), Auth token one of the configured values. The Rust `ServerLink` does the rest — health loop flips presence to *available*, turns cross `server_request`. CORS never applies: the client is native, the transport is Rust `reqwest`.
+
+**What this does not change.** Gaia Web still talks to the de facto topology directly (Hermes proxy, Hindsight, cognition) — routing Web through the Gaia API is a later, deliberate migration, not a side effect of this milestone. Logos is still client-side in Web; when it moves server-side, this service is where it lands. Capture remains unimplemented by explicit instruction (the architecture is ready).
+
+**Open items carried forward.** Streaming turns; conversation persistence server-side (threads are still client-in-memory); Web migrating onto this API; Logos relocation.
+
+---
+
 ## How to Read This Document
 
 Each milestone records:

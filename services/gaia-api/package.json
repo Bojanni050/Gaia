@@ -1,0 +1,15 @@
+{
+  "name": "gaia-api",
+  "version": "0.1.0",
+  "private": true,
+  "description": "The Gaia API — the server-side seam first-class clients (Desktop, Web) talk to. Owns identity loading and Hermes orchestration; never leaks providers or models.",
+  "type": "commonjs",
+  "main": "src/server.js",
+  "scripts": {
+    "start": "node src/server.js",
+    "test": "node --test test/*.test.js"
+  },
+  "dependencies": {
+    "express": "^4.19.2"
+  }
+}

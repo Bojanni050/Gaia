@@ -4,6 +4,7 @@
 //! to, notification and audio preferences, enabled capture sources). They
 //! never encode anything cognitive; Gaia's long-term state lives server-side.
 
+mod secrets;
 mod store;
 
 use std::sync::RwLock;
@@ -61,7 +62,19 @@ impl SettingsState {
     /// Falls back to defaults when no settings file exists yet.
     pub fn open(config_dir: Option<std::path::PathBuf>) -> Self {
         let store = store::FileSettingsStore::open(config_dir);
-        let current = store.load().unwrap_or_default();
+        let mut current = store.load().unwrap_or_default();
+
+        // One-time migration: a token written to settings.json by an
+        // earlier version moves into the OS credential store and out of
+        // the plain-JSON file. If the keyring is unavailable the token
+        // stays where it is (legacy behaviour, no worse than before).
+        if let Some(token) = current.server.auth_token.clone() {
+            if secrets::store_token(Some(&token)).is_ok() {
+                current.server.auth_token = None;
+                let _ = store.save(&current);
+            }
+        }
+
         Self {
             current: RwLock::new(current),
             store,
@@ -69,7 +82,13 @@ impl SettingsState {
     }
 
     pub fn get(&self) -> Settings {
-        self.current.read().expect("settings lock poisoned").clone()
+        let mut settings = self.current.read().expect("settings lock poisoned").clone();
+        // The token lives in the credential store; hydrate it for callers
+        // (the settings UI and the server link) when one is stored there.
+        if let Some(token) = secrets::load_token() {
+            settings.server.auth_token = Some(token);
+        }
+        settings
     }
 
     fn replace(&self, settings: Settings) {
@@ -88,9 +107,17 @@ pub async fn settings_save(
     settings: tauri::State<'_, SettingsState>,
     new_settings: Settings,
 ) -> Result<Settings, crate::error::DesktopError> {
+    // The token moves to the OS credential store; settings.json stays
+    // secret-free. If the keyring is unavailable, the token is persisted
+    // in the file instead (legacy behaviour) so saving never breaks.
+    let mut to_persist = new_settings.clone();
+    if secrets::store_token(new_settings.server.auth_token.as_deref()).is_ok() {
+        to_persist.server.auth_token = None;
+    }
+
     settings
         .store
-        .save(&new_settings)
+        .save(&to_persist)
         .map_err(crate::error::DesktopError::Settings)?;
     settings.replace(new_settings.clone());
 

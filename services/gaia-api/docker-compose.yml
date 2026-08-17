@@ -1,0 +1,15 @@
+services:
+  gaia-api:
+    build:
+      # Repo root as context so the Dockerfile can bake in the canonical
+      # soul.md (identity lives in the repository, not in this service).
+      context: ..
+      dockerfile: services/gaia-api/Dockerfile
+    container_name: gaia-api
+    restart: unless-stopped
+    env_file: .env
+    ports:
+      # Tailscale-only, same posture as Hindsight and gaia-cognition:
+      # reachable from the tailnet (desktop clients live there), never
+      # exposed to the open internet. Auth is the bearer token.
+      - "100.64.144.93:8891:8891"
