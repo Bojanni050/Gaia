@@ -1,21 +1,33 @@
 import React from 'react';
-import { Plus, Trash2 } from 'lucide-react';
+import { Plus, Trash2, X } from 'lucide-react';
 import { L } from '../lib/lexicon';
 
-export default function Threads({ 
-  conversations, 
-  activeId, 
-  onSelect, 
-  onNew, 
-  onDelete, 
-  lang = 'nl', 
-  onLangChange 
+export default function Threads({
+  conversations,
+  activeId,
+  onSelect,
+  onNew,
+  onDelete,
+  lang = 'nl',
+  onLangChange,
+  open = false,
+  onClose,
 }) {
   return (
-    <nav className="sidebar" data-testid="sidebar">
-      <div className="brand">
-        <span className="brand-mark" />
-        <span className="brand-name">Gaia</span>
+    <nav className={`sidebar${open ? ' open' : ''}`} data-testid="sidebar">
+      <div className="sidebar-header">
+        <div className="brand">
+          <span className="brand-mark" />
+          <span className="brand-name">Gaia</span>
+        </div>
+        <button
+          className="sidebar-close"
+          onClick={onClose}
+          aria-label={L.closeMenu}
+          data-testid="sidebar-close-btn"
+        >
+          <X size={18} />
+        </button>
       </div>
 
       <button className="new-thread-btn" onClick={onNew} data-testid="new-conversation-btn">

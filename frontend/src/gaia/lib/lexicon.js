@@ -33,6 +33,10 @@ export const LANGUAGES = {
     footLine1: 'Een levenslange persoonlijke intelligentie,',
     footLine2: 'die groeit door begrip.',
 
+    // Mobile navigation
+    openMenu: 'Menu openen',
+    closeMenu: 'Menu sluiten',
+
     // Presence words
     thinking: 'denken',
     speaking: 'spreken',
@@ -67,6 +71,10 @@ export const LANGUAGES = {
     // Sidebar footer
     footLine1: 'A lifelong personal intelligence,',
     footLine2: 'growing through understanding.',
+
+    // Mobile navigation
+    openMenu: 'Open menu',
+    closeMenu: 'Close menu',
 
     // Presence words
     thinking: 'thinking',

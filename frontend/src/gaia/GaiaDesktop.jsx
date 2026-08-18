@@ -1,12 +1,15 @@
 import React, { useState } from 'react';
 import { motion } from 'framer-motion';
+import { Menu } from 'lucide-react';
 import Threads from './sidebar/Threads';
 import Conversation from './conversation/Conversation';
 import { useConversation } from './state/useConversation';
+import { L } from './lib/lexicon';
 
 export default function GaiaDesktop() {
   const g = useConversation();
   const [lang, setLang] = useState(localStorage.getItem('gaia.lang') || 'nl');
+  const [sidebarOpen, setSidebarOpen] = useState(false);
 
   const handleLangChange = (newLang) => {
     localStorage.setItem('gaia.lang', newLang);
@@ -21,14 +24,31 @@ export default function GaiaDesktop() {
       animate={{ opacity: 1 }}
       transition={{ duration: 1.0, ease: 'easeOut' }}
     >
+      <button
+        className="mobile-menu-btn"
+        onClick={() => setSidebarOpen(true)}
+        aria-label={L.openMenu}
+        data-testid="mobile-menu-btn"
+      >
+        <Menu size={18} />
+      </button>
+
+      <div
+        className={`sidebar-backdrop${sidebarOpen ? ' open' : ''}`}
+        onClick={() => setSidebarOpen(false)}
+        data-testid="sidebar-backdrop"
+      />
+
       <Threads
         conversations={g.conversations}
         activeId={g.activeId}
-        onSelect={g.openConversation}
-        onNew={() => g.newConversation('')}
+        onSelect={(id) => { g.openConversation(id); setSidebarOpen(false); }}
+        onNew={() => { g.newConversation(''); setSidebarOpen(false); }}
         onDelete={g.deleteConversation}
         lang={lang}
         onLangChange={handleLangChange}
+        open={sidebarOpen}
+        onClose={() => setSidebarOpen(false)}
       />
 
       <main className="gaia-main">
