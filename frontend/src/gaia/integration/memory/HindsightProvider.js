@@ -107,7 +107,7 @@ export class HindsightProvider extends MemoryProvider {
   /**
    * @param {string} query
    * @param {{ signal?: AbortSignal, budget?: 'low'|'mid'|'high' }} [options]
-   * @returns {Promise<import('../../../contracts/hindsight').Reflection[]>}
+   * @returns {Promise<import('@gaia/contracts').Reflection[]>}
    */
   async retrieveRelevantContext(query, { signal, budget = 'mid' } = {}) {
     let res;

@@ -12,7 +12,7 @@ const RECALL_TIMEOUT_MS = 4000;
  * for turns memoryPolicy judges too trivial to be worth a lookup.
  *
  * @param {string} query
- * @returns {Promise<import('../../contracts/hindsight').Reflection[]>}
+ * @returns {Promise<import('@gaia/contracts').Reflection[]>}
  */
 export async function recallRelevantContext(query) {
   if (!query || !query.trim()) return [];
@@ -43,7 +43,7 @@ function normalizeSummary(summary) {
  * whatever confidence Hindsight returned with the recall, not just to a
  * formal Hypothesis record). Returns null for anything with no summary to
  * show, so callers can filter it out.
- * @param {import('../../contracts/hindsight').Reflection} reflection
+ * @param {import('@gaia/contracts').Reflection} reflection
  * @returns {string|null}
  */
 function formatReflectionLine(reflection) {
@@ -63,7 +63,7 @@ function formatReflectionLine(reflection) {
  * so Logos still sees the disagreement, and it never invents content that
  * isn't in the recalled summary.
  *
- * @param {import('../../contracts/hindsight').Reflection[]} reflections
+ * @param {import('@gaia/contracts').Reflection[]} reflections
  * @returns {string[]}
  */
 export function condenseMemoryContext(reflections) {
@@ -84,7 +84,7 @@ export function condenseMemoryContext(reflections) {
  * Renders recalled reflections into a system-prompt block. Returns null
  * when there is nothing worth surfacing, so callers can skip adding an
  * empty system message.
- * @param {import('../../contracts/hindsight').Reflection[]} reflections
+ * @param {import('@gaia/contracts').Reflection[]} reflections
  * @returns {string|null}
  */
 export function renderMemoryContext(reflections) {

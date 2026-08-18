@@ -27,7 +27,7 @@ export class MemoryProvider {
   /**
    * Store a reflection. Reflection, not logging — callers pass what Gaia
    * came to understand, not the raw transcript (architecture.md §6).
-   * @param {import('../../../contracts/hindsight').Reflection} reflection
+   * @param {import('@gaia/contracts').Reflection} reflection
    * @returns {Promise<{ operationId: string }>}
    */
   // eslint-disable-next-line no-unused-vars, require-await
@@ -39,7 +39,7 @@ export class MemoryProvider {
    * Retrieve relevant context for a query.
    * @param {string} query
    * @param {{ signal?: AbortSignal }} [options]
-   * @returns {Promise<import('../../../contracts/hindsight').Reflection[]>}
+   * @returns {Promise<import('@gaia/contracts').Reflection[]>}
    */
   // eslint-disable-next-line no-unused-vars, require-await
   async retrieveRelevantContext(query, options = {}) {
@@ -83,7 +83,7 @@ export class MemoryProvider {
    * Store a pattern — content Logos has already synthesized from recurring
    * facts. This just persists it; forming the abstraction is Logos's job.
    * @param {{ content: string, confidence?: number, coherenceScore?: number, sourceMemoryIds?: string[] }} pattern
-   * @returns {Promise<import('../../../contracts/hindsight').Pattern>}
+   * @returns {Promise<import('@gaia/contracts').Pattern>}
    */
   // eslint-disable-next-line no-unused-vars, require-await
   async formPattern(pattern) {
@@ -91,7 +91,7 @@ export class MemoryProvider {
   }
 
   /**
-   * @returns {Promise<import('../../../contracts/hindsight').Pattern[]>}
+   * @returns {Promise<import('@gaia/contracts').Pattern[]>}
    */
   // eslint-disable-next-line require-await
   async queryPatterns() {
@@ -102,7 +102,7 @@ export class MemoryProvider {
    * Propose a hypothesis — held with explicit confidence, not yet earned as
    * fact (architecture.md §6.1). Starts in status 'proposed'.
    * @param {{ statement: string, confidence?: number, verificationPlan?: string, evidenceMemoryIds?: string[] }} hypothesis
-   * @returns {Promise<import('../../../contracts/hindsight').Hypothesis>}
+   * @returns {Promise<import('@gaia/contracts').Hypothesis>}
    */
   // eslint-disable-next-line no-unused-vars, require-await
   async proposeHypothesis(hypothesis) {
@@ -110,8 +110,8 @@ export class MemoryProvider {
   }
 
   /**
-   * @param {import('../../../contracts/hindsight').HypothesisStatus} [status]
-   * @returns {Promise<import('../../../contracts/hindsight').Hypothesis[]>}
+   * @param {import('@gaia/contracts').HypothesisStatus} [status]
+   * @returns {Promise<import('@gaia/contracts').Hypothesis[]>}
    */
   // eslint-disable-next-line no-unused-vars, require-await
   async listHypotheses(status) {
@@ -124,7 +124,7 @@ export class MemoryProvider {
    * rejected one.
    * @param {string} hypothesisId
    * @param {{ statement?: string, confidence?: number, verificationPlan?: string, evidenceMemoryIds?: string[] }} patch
-   * @returns {Promise<import('../../../contracts/hindsight').Hypothesis>}
+   * @returns {Promise<import('@gaia/contracts').Hypothesis>}
    */
   // eslint-disable-next-line no-unused-vars, require-await
   async updateHypothesis(hypothesisId, patch) {

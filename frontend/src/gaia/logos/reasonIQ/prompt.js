@@ -6,7 +6,7 @@
  * a chain-of-thought — it returns one structured ReasoningResult and stops.
  */
 import { SOURCES_OF_TRUTH } from '../intentIQ/registry';
-import { HYPOTHESIS_STATUSES } from '../../../contracts/hindsight';
+import { HYPOTHESIS_STATUSES } from '@gaia/contracts';
 
 const CONTEXT_WINDOW = 8; // recent turns of conversation, matching intentIQ's window
 
@@ -94,11 +94,11 @@ function formatAttachments(attachments) {
  * @param {import('../intentIQ/schema').IntentDecisionSchema} intentDecision
  * @param {{ role: string, content: string }[]} messages full conversation so far, most recent last
  * @param {{
- *   recalledMemory?: import('../../../contracts/hindsight').Reflection[],
+ *   recalledMemory?: import('@gaia/contracts').Reflection[],
  *   existingHypotheses?: Array<{ statement: string, confidence: number, status: string }>,
  *   attachments?: Array<{ name?: string, type?: string }>,
  * }} [context]
- * @returns {import('../../../contracts/reasoning').ReasoningMessage[]}
+ * @returns {import('@gaia/contracts').ReasoningMessage[]}
  */
 export function buildReasoningPrompt(intentDecision, messages, context = {}) {
   const { recalledMemory = [], existingHypotheses = [], attachments = [] } = context;

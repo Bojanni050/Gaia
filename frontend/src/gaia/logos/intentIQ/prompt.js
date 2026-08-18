@@ -64,7 +64,7 @@ Respond with ONLY a single JSON object matching this exact shape — no prose, n
 /**
  * @param {{ role: string, content: string }[]} messages full conversation so far, most recent last
  * @param {{ attachments?: Array<{ name?: string, type?: string }> }} [options]
- * @returns {import('../../../contracts/reasoning').ReasoningMessage[]}
+ * @returns {import('@gaia/contracts').ReasoningMessage[]}
  */
 export function buildIntentPrompt(messages, options = {}) {
   const { attachments = [] } = options;

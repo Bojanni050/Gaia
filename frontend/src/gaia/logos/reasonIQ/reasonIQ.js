@@ -41,7 +41,7 @@ function devWarn(reason, detail) {
  * @param {import('../intentIQ/schema').IntentDecisionSchema} intentDecision
  * @param {{ role: string, content: string }[]} messages conversation so far, most recent last
  * @param {{
- *   recalledMemory?: import('../../../contracts/hindsight').Reflection[],
+ *   recalledMemory?: import('@gaia/contracts').Reflection[],
  *   existingHypotheses?: Array<{ statement: string, confidence: number, status: string, verificationPlan?: string }>,
  *   attachments?: Array<{ name?: string, type?: string }>,
  *   provider?: import('../../integration/reasoning').ReasoningProvider,

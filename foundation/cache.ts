@@ -1,16 +1,17 @@
 import { loadDocument } from './loader';
+import { FoundationConfig } from './config';
 
 interface CacheEntry {
   content: string;
   timestamp: number;
 }
 
-class FoundationCache {
+export class FoundationCache {
   private cache: Map<string, CacheEntry> = new Map();
-  private rootDir: string;
+  private config: FoundationConfig;
 
-  constructor(rootDir: string = process.cwd()) {
-    this.rootDir = rootDir;
+  constructor(config: FoundationConfig) {
+    this.config = config;
   }
 
   /**
@@ -27,7 +28,7 @@ class FoundationCache {
    * Forces a reload of a specific document into the cache.
    */
   public reload(filename: string): void {
-    const content = loadDocument(filename, this.rootDir);
+    const content = loadDocument(filename, this.config);
     this.cache.set(filename, {
       content,
       timestamp: Date.now()
@@ -52,6 +53,3 @@ class FoundationCache {
     return result;
   }
 }
-
-// Export a singleton instance
-export const cache = new FoundationCache();

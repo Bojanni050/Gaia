@@ -1,26 +1,27 @@
 import fs from 'fs';
 import path from 'path';
 import { FoundationBuilder } from './builder';
+import { FoundationCache } from './cache';
+import { resolveConfig } from './config';
 
-const ARTIFACT_PATH = path.join(process.cwd(), 'frontend', 'src', 'gaia', 'foundation', 'artifact.json');
-const DOCS_DIR = path.join(process.cwd(), 'docs');
-const IDENTITY_DIR = path.join(process.cwd(), 'frontend', 'src', 'gaia', 'identity');
+const config = resolveConfig();
+const cache = new FoundationCache(config);
 
 function buildArtifact() {
   console.log('Foundation Engine: Building foundation artifact...');
   try {
-    FoundationBuilder.preload();
-    const documents = FoundationBuilder.buildDictionary();
-    
+    FoundationBuilder.preload(cache);
+    const documents = FoundationBuilder.buildDictionary(cache);
+
     // Ensure the output directory exists
-    const dir = path.dirname(ARTIFACT_PATH);
+    const dir = path.dirname(config.artifactPath);
     if (!fs.existsSync(dir)) {
       fs.mkdirSync(dir, { recursive: true });
     }
-    
+
     // Write the JSON artifact
-    fs.writeFileSync(ARTIFACT_PATH, JSON.stringify({ documents }, null, 2), 'utf-8');
-    console.log(`Foundation Engine: Successfully wrote artifact to ${ARTIFACT_PATH}`);
+    fs.writeFileSync(config.artifactPath, JSON.stringify({ documents }, null, 2), 'utf-8');
+    console.log(`Foundation Engine: Successfully wrote artifact to ${config.artifactPath}`);
   } catch (err) {
     console.error('Foundation Engine: Failed to build artifact.', err);
     process.exit(1);
@@ -34,7 +35,8 @@ const isWatchMode = args.includes('--watch');
 buildArtifact();
 
 if (isWatchMode) {
-  console.log(`Foundation Engine: Watching for changes in ${DOCS_DIR} and ${IDENTITY_DIR}...`);
+  const soulDir = path.dirname(config.soulPath);
+  console.log(`Foundation Engine: Watching for changes in ${config.docsDir} and ${soulDir}...`);
 
   let debounceTimeout: NodeJS.Timeout | null = null;
 
@@ -48,13 +50,13 @@ if (isWatchMode) {
     }, 100);
   };
 
-  fs.watch(DOCS_DIR, (eventType, filename) => {
+  fs.watch(config.docsDir, (eventType, filename) => {
     if (filename && filename.endsWith('.md')) {
       scheduleRebuild(filename);
     }
   });
 
-  fs.watch(IDENTITY_DIR, (eventType, filename) => {
+  fs.watch(soulDir, (eventType, filename) => {
     if (filename && filename.endsWith('.md')) {
       scheduleRebuild(filename);
     }

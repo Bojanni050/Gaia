@@ -84,6 +84,11 @@ let webpackConfig = {
       jestConfig.moduleNameMapper = {
         ...jestConfig.moduleNameMapper,
         "\\.md$": "<rootDir>/src/__mocks__/mdMock.js",
+        // Kept in lockstep with the webpack alias below — see
+        // packages/gaia-contracts/README.md for why this is an alias
+        // and not a real dependency yet.
+        "^@gaia/contracts$": "<rootDir>/../packages/gaia-contracts/src/index.js",
+        "^@gaia/contracts/(.*)$": "<rootDir>/../packages/gaia-contracts/src/$1",
       };
       return jestConfig;
     },
@@ -91,8 +96,25 @@ let webpackConfig = {
   webpack: {
     alias: {
       '@': path.resolve(__dirname, 'src'),
+      // Phase 0 of docs/split-plan.md: contracts live in their own
+      // package (packages/gaia-contracts) so they're importable as a
+      // unit ahead of the eventual Gaia-Cloud repo split. Aliased
+      // straight to source (no symlink) so CRA's ModuleScopePlugin
+      // never sees a resolved path outside frontend/src.
+      '@gaia/contracts': path.resolve(__dirname, '../packages/gaia-contracts/src'),
     },
     configure: (webpackConfig) => {
+
+      // CRA's ModuleScopePlugin blocks any resolved path outside
+      // frontend/src, even when webpack reached it via the alias above
+      // rather than a relative import. Extend its allow-list with
+      // packages/gaia-contracts rather than disabling the guard.
+      const moduleScopePlugin = webpackConfig.resolve.plugins?.find(
+        (plugin) => plugin.constructor && plugin.constructor.name === 'ModuleScopePlugin'
+      );
+      if (moduleScopePlugin && Array.isArray(moduleScopePlugin.appSrcs)) {
+        moduleScopePlugin.appSrcs.push(path.resolve(__dirname, '../packages/gaia-contracts/src'));
+      }
 
       // Allow .md files to be imported as raw text strings.
       // Gaia loads her SOUL document (docs/soul.md) as the system prompt.

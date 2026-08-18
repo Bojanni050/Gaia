@@ -1,20 +1,17 @@
 import fs from 'fs';
 import path from 'path';
+import { FoundationConfig } from './config';
 
 // soul.md's canonical source is the identity layer, not docs/ (docs/soul.md is
 // an architectural overview of SOUL, not the constitution itself). The
-// constitution is owned by Gaia Cloud (services/gaia-api/identity); every
-// other foundation document lives in docs/.
-const IDENTITY_OVERRIDES: Record<string, string> = {
-  'soul.md': path.join('services', 'gaia-api', 'identity', 'soul.md'),
-};
+// constitution is owned by Gaia Cloud (services/gaia-api/identity) — see
+// FoundationConfig.soulPath.
 
 /**
- * Reads a markdown document from disk and validates its existence.
+ * Reads a foundation markdown document from disk and validates its existence.
  */
-export function loadDocument(filename: string, rootDir: string = process.cwd()): string {
-  const relativePath = IDENTITY_OVERRIDES[filename] ?? path.join('docs', filename);
-  const filePath = path.join(rootDir, relativePath);
+export function loadDocument(filename: string, config: FoundationConfig): string {
+  const filePath = filename === 'soul.md' ? config.soulPath : path.join(config.docsDir, filename);
 
   if (!fs.existsSync(filePath)) {
     throw new Error(`Foundation Loader: Could not find document at ${filePath}`);

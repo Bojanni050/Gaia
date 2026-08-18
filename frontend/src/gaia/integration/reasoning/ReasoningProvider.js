@@ -16,7 +16,7 @@ export class ReasoningProvider {
 
   /**
    * Quick liveness check. Implementations should be cheap and timeout-fast.
-   * @returns {Promise<import('../../contracts/reasoning').ReasoningHealth>}
+   * @returns {Promise<import('@gaia/contracts').ReasoningHealth>}
    */
   // eslint-disable-next-line class-methods-use-this, require-await
   async health() {
@@ -31,7 +31,7 @@ export class ReasoningProvider {
    * Implementations MUST reject with a typed error (see errors.js) so the
    * desktop can phrase a calm Gaia-language message.
    *
-   * @param {import('../../contracts/reasoning').ReasoningMessage[]} messages
+   * @param {import('@gaia/contracts').ReasoningMessage[]} messages
    * @param {{ signal?: AbortSignal, onDelta?: (chunk: string) => void }} [options]
    * @returns {Promise<string>}
    */
@@ -42,7 +42,7 @@ export class ReasoningProvider {
 
   /**
    * Non-streaming chat completion. Used for short internal calls.
-   * @param {import('../../contracts/reasoning').ReasoningMessage[]} messages
+   * @param {import('@gaia/contracts').ReasoningMessage[]} messages
    * @param {{ signal?: AbortSignal }} [options]
    * @returns {Promise<string>}
    */

@@ -18,7 +18,7 @@
  */
 import { z } from 'zod';
 import { CAPABILITIES, REASONING_PROFILES, SOURCES_OF_TRUTH } from '../intentIQ/registry';
-import { HYPOTHESIS_STATUSES } from '../../../contracts/hindsight';
+import { HYPOTHESIS_STATUSES } from '@gaia/contracts';
 
 const CapabilityEnum = z.enum(CAPABILITIES);
 const ReasoningProfileEnum = z.enum(REASONING_PROFILES);
