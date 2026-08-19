@@ -1,0 +1,3 @@
+# Local persisted state — reasoningModelStore.js's OpenRouter key + model
+# selection. Never commit this; it holds a live API key.
+data/

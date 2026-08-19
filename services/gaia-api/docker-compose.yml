@@ -9,6 +9,12 @@ services:
     container_name: gaia-api
     restart: unless-stopped
     env_file: .env
+    volumes:
+      # Persists reasoningModelStore.js's saved OpenRouter key + chosen
+      # model (set via /admin) across redeploys/restarts. Without this
+      # volume the admin config is lost on every container recreation —
+      # the same class of trap as any other untracked state on the VPS.
+      - ./data:/app/data
     ports:
       # Tailscale-only, same posture as Hindsight and gaia-cognition:
       # reachable from the tailnet (desktop clients live there), never

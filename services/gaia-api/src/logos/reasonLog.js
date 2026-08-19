@@ -1,0 +1,40 @@
+'use strict';
+
+/**
+ * Structured, server-side-only logging for ReasonIQ decisions. Same
+ * discipline as intentLog.js: a dev/eval observability surface, never
+ * returned to a client. Deliberately does not log hidden chain-of-thought
+ * (§13) — only the structured result itself, which already carries
+ * rationale in `reasoning`/`explanation` fields where relevant.
+ */
+
+const MAX_TEXT_CHARS = 300;
+
+function truncate(text) {
+  const str = String(text || '');
+  return str.length > MAX_TEXT_CHARS ? `${str.slice(0, MAX_TEXT_CHARS)}…` : str;
+}
+
+/**
+ * @param {{ result: object, input: string, contextId: string|undefined, correlationId: string }} entry
+ * @param {(line: string) => void} [sink]
+ */
+function logReasoningResult(entry, sink = (line) => console.log(line)) {
+  const record = {
+    kind: 'reasoniq.result',
+    timestamp: new Date().toISOString(),
+    correlationId: entry.correlationId,
+    contextId: entry.contextId || null,
+    input: truncate(entry.input),
+    reasoningDepth: entry.result.reasoningDepth,
+    hypothesisCount: entry.result.hypotheses.length,
+    contradictionCount: entry.result.contradictions.length,
+    sufficientForConclusion: entry.result.sufficientForConclusion,
+    confidence: entry.result.confidence,
+    fallbackReason: entry.result.meta.fallbackReason,
+  };
+  sink(JSON.stringify(record));
+  return record;
+}
+
+module.exports = { logReasoningResult, truncate };

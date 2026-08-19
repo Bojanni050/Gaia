@@ -8,6 +8,7 @@
  *   GET  /soul               → { version: string }   (identity version only)
  *   POST /conversation/turn  → { reply: string }     (auth required, Desktop's exact contract)
  *   POST /conversation/turn  → SSE stream            (auth required; { ..., stream: true } — Phase B, docs/web-migration-plan.md)
+ *   /admin/*                 → operator-only ReasonIQ model configuration (adminRoutes.js) — never part of any client's contract
  *
  * Everything cognitive lives here or behind Hermes; clients send plain
  * turns and render plain replies. Model-agnostic by construction: the
@@ -20,6 +21,8 @@ const { createHindsightClient } = require('./hindsightClient');
 const { performTurn, performStreamingTurn } = require('./turn');
 const { loadSoul } = require('./soul');
 const { loadFoundationDocuments } = require('./foundation');
+const { createAdminRouter } = require('./adminRoutes');
+const { createReasoningModelStore } = require('./logos/reasoningModelStore');
 
 const PORT = Number(process.env.PORT || 8891);
 
@@ -57,6 +60,11 @@ function createApp(env = process.env) {
   // Identity version only — clients observe which SOUL they're talking to;
   // the constitution itself stays server-side.
   app.get('/soul', (req, res) => res.json({ version: soul.version }));
+
+  const reasoningModelStore = createReasoningModelStore(
+    env.REASONIQ_CONFIG_PATH !== undefined ? { storePath: env.REASONIQ_CONFIG_PATH } : {}
+  );
+  app.use('/admin', createAdminRouter({ store: reasoningModelStore, auth }));
 
   app.post('/conversation/turn', auth, async (req, res) => {
     const messages = req.body && req.body.messages;

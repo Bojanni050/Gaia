@@ -21,6 +21,7 @@ COPY package.json ./package.json
 RUN npm install --omit=dev
 
 COPY src ./src
+COPY public ./public
 COPY identity/soul.md ./soul.md
 COPY foundation-artifact.json ./foundation-artifact.json
 

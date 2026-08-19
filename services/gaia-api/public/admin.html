@@ -1,0 +1,193 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Gaia Cloud — ReasonIQ model</title>
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<style>
+  :root { color-scheme: dark; }
+  body {
+    margin: 0; padding: 2.5rem 1.5rem 4rem; min-height: 100vh;
+    background: #0f0e0c; color: #ece7dc;
+    font-family: -apple-system, "Segoe UI", system-ui, sans-serif;
+    display: flex; justify-content: center;
+  }
+  main { width: 100%; max-width: 560px; }
+  h1 { font-size: 1.3rem; font-weight: 600; margin: 0 0 0.25rem; }
+  p.lede { color: #9b9484; margin: 0 0 2rem; font-size: 0.9rem; }
+  section {
+    background: #17150f; border: 1px solid #2a2620; border-radius: 10px;
+    padding: 1.25rem 1.4rem; margin-bottom: 1.25rem;
+  }
+  h2 { font-size: 0.95rem; margin: 0 0 1rem; color: #d2a24c; font-weight: 600; }
+  label { display: block; font-size: 0.8rem; color: #9b9484; margin: 0.9rem 0 0.3rem; }
+  label:first-of-type { margin-top: 0; }
+  input, select {
+    width: 100%; box-sizing: border-box; background: #0f0e0c; color: #ece7dc;
+    border: 1px solid #332d24; border-radius: 6px; padding: 0.55rem 0.7rem;
+    font-size: 0.9rem; font-family: inherit;
+  }
+  input:focus, select:focus { outline: none; border-color: #d2a24c; }
+  button {
+    background: #d2a24c; color: #17150f; border: none; border-radius: 6px;
+    padding: 0.55rem 1rem; font-size: 0.85rem; font-weight: 600; cursor: pointer;
+    margin-top: 1rem; margin-right: 0.5rem;
+  }
+  button.secondary { background: transparent; color: #d2a24c; border: 1px solid #4a4030; }
+  button:disabled { opacity: 0.5; cursor: default; }
+  .status { font-size: 0.82rem; margin-top: 0.75rem; min-height: 1.1em; }
+  .status.ok { color: #7fbf8f; }
+  .status.err { color: #d98a8a; }
+  .hint { font-size: 0.76rem; color: #6b6459; margin-top: 0.4rem; }
+  .model-meta { font-size: 0.76rem; color: #9b9484; margin-top: 0.3rem; }
+</style>
+</head>
+<body>
+<main>
+  <h1>ReasonIQ — reasoning model</h1>
+  <p class="lede">Operator-only configuration for Gaia's ReasonIQ. Never surfaced to Gaia Desktop or Gaia Web — see architecture.md's no-provider-leakage rule.</p>
+
+  <section>
+    <h2>Gaia API access</h2>
+    <label for="token">Bearer token</label>
+    <input id="token" type="password" placeholder="one of GAIA_API_TOKEN's values" autocomplete="off">
+    <p class="hint">Stored only in this browser's local storage, sent as an Authorization header. The same token used by Gaia's clients.</p>
+  </section>
+
+  <section>
+    <h2>OpenRouter</h2>
+    <label for="apiKey">API key</label>
+    <input id="apiKey" type="password" placeholder="sk-or-..." autocomplete="off">
+    <p class="hint" id="keyHint">No key saved yet.</p>
+    <button id="saveKeyBtn">Save key</button>
+    <div class="status" id="keyStatus"></div>
+  </section>
+
+  <section>
+    <h2>Model</h2>
+    <button id="fetchModelsBtn" class="secondary">Fetch available models</button>
+    <label for="modelSelect">Model for ReasonIQ</label>
+    <select id="modelSelect"><option value="">— save a key and fetch models —</option></select>
+    <div class="model-meta" id="modelMeta"></div>
+    <button id="saveModelBtn" disabled>Save selection</button>
+    <div class="status" id="modelStatus"></div>
+  </section>
+</main>
+
+<script>
+(function () {
+  const $ = (id) => document.getElementById(id);
+  const tokenEl = $('token'), apiKeyEl = $('apiKey'), keyHintEl = $('keyHint'), keyStatusEl = $('keyStatus');
+  const modelSelectEl = $('modelSelect'), modelMetaEl = $('modelMeta'), modelStatusEl = $('modelStatus');
+  const saveKeyBtn = $('saveKeyBtn'), fetchModelsBtn = $('fetchModelsBtn'), saveModelBtn = $('saveModelBtn');
+
+  let models = [];
+  let currentModel = null;
+
+  tokenEl.value = localStorage.getItem('gaia_admin_token') || '';
+  tokenEl.addEventListener('change', () => localStorage.setItem('gaia_admin_token', tokenEl.value));
+
+  function authHeaders() {
+    return { 'Authorization': 'Bearer ' + tokenEl.value, 'Content-Type': 'application/json' };
+  }
+
+  function setStatus(el, text, ok) {
+    el.textContent = text;
+    el.className = 'status ' + (ok ? 'ok' : 'err');
+  }
+
+  async function loadConfig() {
+    try {
+      const res = await fetch('/admin/api/reasoniq/config', { headers: authHeaders() });
+      if (!res.ok) return;
+      const cfg = await res.json();
+      currentModel = cfg.model;
+      keyHintEl.textContent = cfg.hasApiKey ? ('Key saved: ' + cfg.maskedApiKey) : 'No key saved yet.';
+      if (cfg.model) {
+        modelSelectEl.innerHTML = '<option value="' + cfg.model + '">' + cfg.model + ' (saved)</option>';
+        modelSelectEl.value = cfg.model;
+      }
+    } catch (_) { /* ignore on initial load */ }
+  }
+
+  saveKeyBtn.addEventListener('click', async () => {
+    if (!apiKeyEl.value.trim()) { setStatus(keyStatusEl, 'Enter an API key first.', false); return; }
+    saveKeyBtn.disabled = true;
+    try {
+      const res = await fetch('/admin/api/reasoniq/config', {
+        method: 'PUT', headers: authHeaders(),
+        body: JSON.stringify({ provider: 'openrouter', baseUrl: 'https://openrouter.ai/api/v1', apiKey: apiKeyEl.value.trim() }),
+      });
+      if (!res.ok) throw new Error(await res.text());
+      const cfg = await res.json();
+      keyHintEl.textContent = 'Key saved: ' + cfg.maskedApiKey;
+      apiKeyEl.value = '';
+      setStatus(keyStatusEl, 'Saved.', true);
+    } catch (err) {
+      setStatus(keyStatusEl, 'Could not save the key — check the bearer token and try again.', false);
+    } finally {
+      saveKeyBtn.disabled = false;
+    }
+  });
+
+  fetchModelsBtn.addEventListener('click', async () => {
+    fetchModelsBtn.disabled = true;
+    setStatus(modelStatusEl, 'Fetching…', true);
+    try {
+      const res = await fetch('/admin/api/reasoniq/models', { headers: authHeaders() });
+      if (!res.ok) {
+        const body = await res.json().catch(() => ({}));
+        throw new Error(body.error || 'request failed');
+      }
+      const body = await res.json();
+      models = body.models || [];
+      modelSelectEl.innerHTML = '';
+      for (const m of models) {
+        const opt = document.createElement('option');
+        opt.value = m.id;
+        opt.textContent = m.name + ' (' + m.id + ')';
+        modelSelectEl.appendChild(opt);
+      }
+      if (currentModel && models.some((m) => m.id === currentModel)) modelSelectEl.value = currentModel;
+      saveModelBtn.disabled = models.length === 0;
+      setStatus(modelStatusEl, models.length + ' models available.', true);
+      updateModelMeta();
+    } catch (err) {
+      setStatus(modelStatusEl, 'Could not fetch models: ' + err.message, false);
+    } finally {
+      fetchModelsBtn.disabled = false;
+    }
+  });
+
+  function updateModelMeta() {
+    const m = models.find((x) => x.id === modelSelectEl.value);
+    modelMetaEl.textContent = m
+      ? 'context: ' + (m.contextLength || '—') + ' tokens · prompt: ' + (m.pricing.prompt ?? '—') + ' · completion: ' + (m.pricing.completion ?? '—')
+      : '';
+  }
+  modelSelectEl.addEventListener('change', updateModelMeta);
+
+  saveModelBtn.addEventListener('click', async () => {
+    if (!modelSelectEl.value) return;
+    saveModelBtn.disabled = true;
+    try {
+      const res = await fetch('/admin/api/reasoniq/config', {
+        method: 'PUT', headers: authHeaders(),
+        body: JSON.stringify({ model: modelSelectEl.value }),
+      });
+      if (!res.ok) throw new Error(await res.text());
+      currentModel = modelSelectEl.value;
+      setStatus(modelStatusEl, 'ReasonIQ will use ' + currentModel + '.', true);
+    } catch (err) {
+      setStatus(modelStatusEl, 'Could not save the selection.', false);
+    } finally {
+      saveModelBtn.disabled = false;
+    }
+  });
+
+  if (tokenEl.value) loadConfig();
+  tokenEl.addEventListener('change', loadConfig);
+})();
+</script>
+</body>
+</html>

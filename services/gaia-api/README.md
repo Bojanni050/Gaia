@@ -19,6 +19,17 @@ Kept in lockstep with the desktop's seam (`desktop/src/state/contract.js`):
 Non-streaming in this phase. The streaming variant grows behind the same
 path (SSE/WebSocket) — clients were built with that seam ready.
 
+Separately, an **operator-only admin surface** (never part of the client
+contract above, never reachable from Gaia Desktop or Gaia Web in the
+normal sense — see `adminRoutes.js`):
+
+| Method | Path                          | Auth   | Body / Result |
+|--------|-------------------------------|--------|----------------|
+| GET    | `/admin`                      | none   | the static ReasonIQ model-config page (`public/admin.html`) |
+| GET    | `/admin/api/reasoniq/config`  | Bearer | masked config: `{ provider, baseUrl, model, hasApiKey, maskedApiKey, updatedAt }` |
+| PUT    | `/admin/api/reasoniq/config`  | Bearer | in: `{ provider?, baseUrl?, model?, apiKey? }` → out: masked config |
+| GET    | `/admin/api/reasoniq/models`  | Bearer | `{ models: [{ id, name, contextLength, pricing }] }`, fetched live from OpenRouter using the saved key |
+
 ## Boundaries
 
 - **Identity is server-side, and owned here.** SOUL is loaded from this
@@ -53,6 +64,38 @@ Milestone 7b) — establish the seam, observe it, wire it into a real
 decision later once there's a Gaia-side decision layer to consume it.
 
 Run the synthetic evaluation set: `npm run eval:intent` (see `eval/README.md`).
+
+## Logos.ReasonIQ (v0.1)
+
+`src/logos/reasonIQ.js` — Gaia's first ReasonIQ: "what does this mean,
+what follows, what hypotheses are plausible, how certain are we?"
+Consumes an `IntentDecision` from IntentIQ (never re-derives intent),
+reasons over explicitly-supplied text/context/evidence only (no memory,
+no database, no tool access), and returns a structured `ReasoningResult`
+(`schemaVersion: "reasoniq.v1"`) distinguishing fact / inference /
+hypothesis / unknown, with Stash-inspired evidence verdicts
+(`supports`/`weakens`/`contradicts`/`irrelevant`) per hypothesis — see
+`src/logos/reasonModels.js` for the full vocabulary and
+`docs/` design research for how those verdicts were chosen.
+
+ReasonIQ has its **own, independently configurable reasoning model**
+(`src/logos/reasoningModelClient.js`, `REASONIQ_MODEL_*` env vars) —
+deliberately not Hermes, not a Gaia capability, and never selected by
+Gaia. It decides per turn whether that model is even worth calling
+(`decideReasoningDepth`); with no model configured, or on an unreachable/
+malformed response, it degrades to an honest, low-confidence result
+rather than guessing or throwing into the turn.
+
+**Out of scope this phase** (see the ReasonIQ v0.1 implementation
+report): Hermes, Hindsight, MCP, tool execution, capability routing, and
+persistence of any kind. `src/logos/index.js`'s `runLogos()` composes
+IntentIQ → ReasonIQ for testing that handoff, but is **not** wired into
+`turn.js` — there's no Gaia-side decision yet to hand a `ReasoningResult`
+to.
+
+Run the synthetic evaluation set: `npm run eval:reason` (see
+`eval/README.md` — it runs against a labeled non-LLM stub, not a real
+model; read that file before trusting the pass rate).
 
 ## Run (dev)
 

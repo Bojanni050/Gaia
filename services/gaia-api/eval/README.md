@@ -1,3 +1,9 @@
+# Logos evaluation harnesses
+
+Two independent harnesses live here — one per Logos faculty. They don't
+share cases or scoring: IntentIQ and ReasonIQ answer different questions
+(architecture.md §4.2) and are evaluated separately.
+
 # IntentIQ evaluation harness
 
 Runs `eval/cases.js` — a **synthetic design/evaluation set**, not real user
@@ -39,3 +45,58 @@ the taxonomy and the classifier honest against each other as both evolve.
   that is a taxonomy change, and belongs back in the design report's
   review process — not a quiet edit to `expectedIntent` here to make the
   harness pass.
+
+---
+
+# ReasonIQ evaluation harness
+
+Runs `eval/reason-cases.js` — also a **synthetic design/evaluation set** —
+against `src/logos/reasonIQ.js`.
+
+```bash
+npm run eval:reason
+```
+
+## The honesty problem this harness has to admit up front
+
+This sandbox has **no live reasoning-model credential**. `npm run
+eval:reason` scores ReasonIQ's pipeline against
+`src/logos/reasoningModelStub.js` — a deterministic, keyword-overlap
+stand-in that is explicitly **not a real reasoning model** (see that
+file's own header comment). The harness is genuinely useful for what it
+*can* check without semantic understanding — reasoning-depth gating,
+whether a hypothesis gets formed, structured-output validity, sufficiency
+and information-gap flagging, confidence bounds — but a passing or
+failing `evidenceVerdict` check often just reflects the stub's crude
+negation/word-overlap heuristic, not ReasonIQ's actual reasoning quality.
+Treat the pass rate as "does the pipeline behave sanely end-to-end,"
+never as "ReasonIQ reasons correctly." That second question needs a real
+configured `REASONIQ_MODEL_*` model and is v0.2 work — see the ReasonIQ
+v0.1 implementation report.
+
+## What this checks
+
+- **structured output valid rate** — did the pipeline produce a
+  well-formed `ReasoningResult` at all (schema shape, required fields).
+- **degraded (fallback) rate** — how often the model call failed or
+  returned unusable output and ReasonIQ fell back to an honest, empty
+  result instead of guessing. Against the stub this should be ~0; a
+  nonzero rate here usually means a bug in the stub or the prompt/parse
+  contract, not a reasoning failure.
+- **shallow / deep rate** — how often ReasonIQ decided the reasoning
+  model wasn't warranted at all (§6 of the brief).
+- **hypothesis formation rate** — how often a hypothesis was formed when
+  the case supplied evidence to reason over.
+- **sufficiency rate** — how often ReasonIQ judged the available
+  information sufficient for a conclusion.
+- **confidence distribution** — bounded below 0.95 by construction
+  (`reasonValidate.js`); this stat catches a systematically mis-tuned
+  case set, not model quality.
+- **failures** — the literal list of cases whose expectations didn't
+  hold, with which specific check failed.
+
+## What this is not
+
+Not a benchmark for the stub, not evidence ReasonIQ reasons well, and not
+real user data. Its job — same as the IntentIQ harness — is to keep the
+pipeline honest about its own contract (never a training target).
