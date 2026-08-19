@@ -12,7 +12,8 @@ Kept in lockstep with the desktop's seam (`desktop/src/state/contract.js`):
 
 | Method | Path                | Auth | Body / Result |
 |--------|---------------------|------|---------------|
-| GET    | `/health` (and `/`) | none | `{ ok: true }` |
+| GET    | `/health` (and `/`) | none | `{ ok: true, soulVersion: string }` |
+| GET    | `/soul`             | none | `{ version: string }` — identity version only, no prompt content |
 | POST   | `/conversation/turn`| Bearer | in: `{ messages: [{ role, content }] }` → out: `{ reply: string }` |
 
 Non-streaming in this phase. The streaming variant grows behind the same
@@ -20,9 +21,12 @@ path (SSE/WebSocket) — clients were built with that seam ready.
 
 ## Boundaries
 
-- **Identity is server-side.** SOUL is loaded from the repository's
-  canonical `frontend/src/gaia/identity/soul.md` (baked into the image;
-  `SOUL_PATH` overrides). No SOUL, no start.
+- **Identity is server-side, and owned here.** SOUL is loaded from this
+  service's own canonical `identity/soul.md` (baked into the image;
+  `SOUL_PATH` overrides) — centralized out of the web client in
+  `e200903` (see `docs/evolution.md`). It carries a `version` field
+  (currently `1.1.0`) that `/health` and `/soul` surface, so clients can
+  observe which identity they're talking to. No SOUL, no start.
 - **No provider leakage.** Hermes' URL, model and token live in this
   service's environment. Error responses are calm sentences, not stack
   traces or upstream status codes.

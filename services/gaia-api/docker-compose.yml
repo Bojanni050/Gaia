@@ -1,12 +1,11 @@
 services:
   gaia-api:
     build:
-      # Repo root as context so the Dockerfile can bake in the canonical
-      # soul.md (identity lives in the repository, not in this service).
-      # Relative paths resolve against this compose file's directory, so
-      # reaching /root/gaia takes two levels up.
-      context: ../..
-      dockerfile: services/gaia-api/Dockerfile
+      # This service's own directory — identity/soul.md lives right here
+      # (centralized in Gaia Cloud, versioned; see docs/evolution.md),
+      # so nothing outside services/gaia-api/ is needed at build time.
+      context: .
+      dockerfile: Dockerfile
     container_name: gaia-api
     restart: unless-stopped
     env_file: .env

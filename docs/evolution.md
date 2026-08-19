@@ -565,6 +565,23 @@ The actual constitution — the "You are Gaia…" document with her character, c
 
 ---
 
+## Amendment — SOUL Fully Owned by Gaia Cloud, and Versioned
+
+**Context.** Milestone 9 above says SOUL is "loaded at startup from the repository's canonical `frontend/src/gaia/identity/soul.md`" — accurate when that milestone landed, superseded the same week by this change and left undocumented until now (caught as stale doc drift during the Phase 1 repo split, `docs/split-plan.md`).
+
+**What changed (`e200903`).** The canonical constitution moved from `frontend/src/gaia/identity/` into `services/gaia-api/identity/` — out of the web client's tree entirely, into the service that actually owns identity per architecture.md. Concretely:
+
+- `services/gaia-api/identity/soul.md` is now the single canonical file (bumped to `version: 1.1.0`); the old `frontend/src/gaia/identity/soul.md` and its dead `soul.js` bridge (never imported anywhere except its own test — see the earlier amendment on the mimicry-vs-attunement fix) were deleted.
+- `foundation/loader.ts`'s `IDENTITY_OVERRIDES` for `soul.md` now points at the new path, so Gaia Web's build (which still vendors/loads SOUL client-side, per Milestone 9's "what this does not change") resolves the same canonical content, just from its new home.
+- `services/gaia-api/src/soul.js` now parses SOUL's `version` front-matter field and `gaia-api` surfaces it: `GET /health` returns `{ ok, soulVersion }`, and a new `GET /soul` returns `{ version }` — unauthenticated, no prompt content — so any client can observe which identity it's talking to without holding a token.
+- 16 backend tests green (up from 15 — the new version-parsing/exposure behavior is covered), 174 web tests green.
+
+**Why this matters.** This is the last piece of "identity belongs to Gaia herself, not to a client" (split-plan.md's framing) actually landing in code — before this, the service that was supposed to own SOUL was reading it out of the web frontend's source tree, the reverse of the intended dependency direction. It also means `services/gaia-api`'s Docker build context could shrink from the repo root to just `services/gaia-api/` itself (done alongside this doc fix) — nothing outside that directory is needed to bake the image anymore.
+
+**What this does not change.** The Milestone 9 boundary is untouched: Desktop still carries no identity, Web still loads its own copy rather than reading from Cloud's service, and routing Web through `gaia-api` remains later, deliberate migration work.
+
+---
+
 ## How to Read This Document
 
 Each milestone records:
