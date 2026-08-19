@@ -597,6 +597,23 @@ The actual constitution — the "You are Gaia…" document with her character, c
 
 ---
 
+## Amendment — Hermes as a Standalone Capability (IntentIQ/OrchestratorIQ Removed)
+
+**Context.** The previous amendment ("Hermes Severed from Logos") corrected `orchestrator.md`'s framing so it no longer read as a hand-off or dependency between Logos and Hermes — but it kept the document itself, still naming a Hermes-internal **IntentIQ** (intent → reasoning profile) and **OrchestratorIQ** (model routing → provider execution → Gaia Personality Filter), disambiguated from Logos's own `intentIQ` by a "coincidental naming collision" note. `architecture.md` §16 recorded that as a deliberate decision: keep it Hermes-internal, don't fold it into Logos. On review, that decision didn't go far enough. `intentIQ` had come to mean two different things — Logos's faculty for understanding what the user wants, and a same-named Hermes-internal stage for deciding how Hermes should reason once called — and no amount of disambiguation prose removes the ambiguity a shared name creates. More fundamentally, documenting Hermes's internal pipeline in Gaia's own `docs/` at all — model routing, provider selection, a "Gaia Personality Filter" living inside Hermes — represented Hermes's internal implementation as if it were part of Gaia's architecture, which contradicts the standing rule that capabilities are instruments Gaia invokes, not systems whose internals Gaia's documentation owns.
+
+**What changed.**
+- `docs/orchestrator.md` — **deleted**. It existed to document a concept (Hermes-internal IntentIQ/OrchestratorIQ) that should not exist in Gaia's architecture, so the fix is removal, not a rename or a clearer boundary note. No replacement document was created — there is nothing about Hermes's internals for Gaia's documentation to say.
+- `docs/architecture.md` (now v2.3.1) — §4.5's boundary rule for Hermes now states plainly that Hermes's internal shape (how it decides what kind of reasoning to do, which provider answers, how it shapes output) is entirely Hermes's concern and outside Gaia's architectural boundary; Gaia gives Hermes an explicit task, Hermes executes it and returns a result. §16's item 1 is corrected from "decided the other way" to record this reversal and point here.
+- `docs/README.md` — the document index's entry for `orchestrator.md` (as document 8) is removed.
+
+**Logos's `intentIQ` is unchanged and is now the only `intentIQ` in Gaia's architecture.** `frontend/src/gaia/logos/intentIQ/` (and `reasonIQ/`) — Logos's real, implemented faculties (see the "First Real Logos intentIQ" and "First Real Logos reasonIQ" amendments above) — are untouched by this change. They were never the ambiguous half of the naming collision; the Hermes-internal concept was.
+
+**What this does not change.** No code changes were required — nothing in this codebase (`services/gaia-api/src/hermesClient.js` included) ever implemented Hermes-internal model routing, reasoning profiles, or a personality filter; `orchestrator.md` documented a design intent for Hermes's own maintainers, not shipped Gaia code, so removing it removes no behavior. Hermes itself — its actual implementation, wherever it lives — is untouched; this is a documentation boundary correction, not a redesign of Hermes. Logos, SOUL, Hindsight, and every other capability boundary are unchanged.
+
+**Why this matters.** "Remove Hermes's internals from Gaia's documentation" is a stronger, simpler rule than "keep disambiguating a name that collides with Logos's own faculty," and it is the rule the rest of this architecture already implies: capabilities are instruments Gaia may employ; their internal implementation is outside her architectural boundary the same way a database's query planner is outside an application's architecture. Hermes can change its own internal reasoning shape freely, under any name it likes, without ever touching a Gaia document again.
+
+---
+
 ## How to Read This Document
 
 Each milestone records:
