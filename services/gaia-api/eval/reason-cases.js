@@ -12,8 +12,11 @@
  * Depth policy: deep reasoning only fires when `evidence` is supplied —
  * intent and text length no longer factor in (reasonIQ.js's
  * decideReasoningDepth). Several cases below that used to expect 'deep'
- * on intent alone now correctly expect 'shallow'; see each one's own
- * `notes` for what that means for their other assertions.
+ * on intent alone now correctly expect 'shallow' — but shallow is not a
+ * placeholder: it still reads IntentIQ's status and whether an evidence-
+ * dependent intent (EVIDENCE_DEPENDENT_INTENTS in reasonIQ.js) got any
+ * evidence, and reports honest uncertainty/gaps from that alone, with no
+ * model call. See each case's own `notes` for which signal it exercises.
  *
  * Each case: { id, input: {text, evidence?, intentDecision?, conversationContext?},
  * expect: { reasoningDepth?, minHypotheses?, expectSufficient?, expectGap?,
@@ -40,8 +43,8 @@ const CASES = [
   {
     id: 'simple-01',
     input: { text: 'What is the capital of Latvia?', intentDecision: { intent: 'inform.explain', status: 'accepted' } },
-    expect: { reasoningDepth: 'shallow' },
-    notes: 'no evidence supplied — the depth gate now stays shallow rather than paying for a model call with nothing to reason over (see reasonIQ.js\'s decideReasoningDepth). Known limitation: the shallow path currently reports sufficientForConclusion:true for any non-empty text, which is not really honest for a factual question it can\'t actually answer — a v0.2 fix, not asserted here.',
+    expect: { reasoningDepth: 'shallow', expectSufficient: false, expectGap: true },
+    notes: 'no evidence supplied — stays shallow (nothing to reason over) but the heuristic still flags the gap honestly, since inform.explain is evidence-dependent (see reasonIQ.js\'s EVIDENCE_DEPENDENT_INTENTS).',
   },
   {
     id: 'simple-02',
@@ -115,8 +118,8 @@ const CASES = [
   {
     id: 'insufficient-01',
     input: { text: 'Should I say yes or no?', evidence: [] },
-    expect: { reasoningDepth: 'shallow' },
-    notes: 'no evidence -> shallow by policy; the historical expectGap/expectSufficient checks belonged to the old intent-driven depth gate and no longer apply (see simple-01\'s note).',
+    expect: { reasoningDepth: 'shallow', expectSufficient: false },
+    notes: 'no intentDecision at all is treated the same as "unknown" — reported as an uncertainty (not an informationGap, since there\'s no known evidence-dependent intent to point at).',
   },
   {
     id: 'insufficient-02',
@@ -166,8 +169,8 @@ const CASES = [
       text: 'Refactor this function to be more readable.',
       intentDecision: { intent: 'create.transform', status: 'accepted' },
     },
-    expect: { reasoningDepth: 'shallow' },
-    notes: 'a transform request with no supplied code to transform, and no evidence -> shallow by policy (see simple-01\'s note). Ideally this would still surface as an information gap; that\'s v0.2 work on the shallow path, not this depth gate.',
+    expect: { reasoningDepth: 'shallow', expectSufficient: false, expectGap: true },
+    notes: 'a transform request with no supplied code to transform — create.transform is evidence-dependent, so the shallow heuristic correctly flags the gap without a model call.',
   },
 
   // --- planning / decision reasoning -----------------------------------------
@@ -188,8 +191,8 @@ const CASES = [
       text: 'Write a homepage introduction for me.',
       intentDecision: { intent: 'create.generate', status: 'accepted' },
     },
-    expect: { reasoningDepth: 'shallow' },
-    notes: 'ReasonIQ interprets the request; it does not draft the copy itself. No evidence supplied -> shallow by policy (see simple-01\'s note).',
+    expect: { reasoningDepth: 'shallow', expectSufficient: true },
+    notes: 'ReasonIQ interprets the request; it does not draft the copy itself. create.generate is deliberately NOT in EVIDENCE_DEPENDENT_INTENTS — the text itself is the description, unlike transform/explain/decide/act, which need external material the heuristic can\'t verify was given. Whether the description is detailed enough to actually write from is a real-reasoning judgment, left for v0.2.',
   },
 
   // --- contradictions across supplied evidence --------------------------------
@@ -250,14 +253,14 @@ const CASES = [
   {
     id: 'insufficient-03',
     input: { text: 'What should I do about it?', evidence: [] },
-    expect: { reasoningDepth: 'shallow' },
-    notes: 'no referent for "it" and no evidence -> shallow by policy (see simple-01\'s note).',
+    expect: { reasoningDepth: 'shallow', expectSufficient: false },
+    notes: 'no referent for "it" and no intentDecision at all -> treated as unknown, reported as an uncertainty (see insufficient-01\'s note).',
   },
   {
     id: 'insufficient-04',
     input: { text: 'Is that a problem?', evidence: [] },
-    expect: { reasoningDepth: 'shallow' },
-    notes: 'no evidence -> shallow by policy (see simple-01\'s note).',
+    expect: { reasoningDepth: 'shallow', expectSufficient: false },
+    notes: 'no intentDecision at all -> treated as unknown (see insufficient-01\'s note).',
   },
 
   // --- more ambiguous context ---------------------------------------------
@@ -333,6 +336,20 @@ const CASES = [
       ],
     },
     expect: { reasoningDepth: 'deep', minHypotheses: 1 },
+  },
+
+  // --- shallow heuristics (no LLM, but not a placeholder either) -----------
+  {
+    id: 'shallow-heuristic-01',
+    input: { text: 'You seem different today.', intentDecision: { intent: 'meta.relational', status: 'accepted' } },
+    expect: { reasoningDepth: 'shallow', expectSufficient: true },
+    notes: 'meta.relational is not evidence-dependent — no gap should be manufactured for a turn that doesn\'t need supporting material.',
+  },
+  {
+    id: 'shallow-heuristic-02',
+    input: { text: 'I need you to handle this.', intentDecision: { intent: null, status: 'ambiguous' } },
+    expect: { reasoningDepth: 'shallow', expectSufficient: false },
+    notes: 'the taxonomy\'s own flagship ambiguous example, without evidence this time — the shallow heuristic should flag the unresolved ambiguity itself, not silently proceed.',
   },
 
   // --- unknown / low-signal deep cases (status unknown but evidence forces depth) --

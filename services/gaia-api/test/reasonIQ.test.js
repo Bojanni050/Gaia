@@ -211,6 +211,66 @@ test('reasonIQ: decideReasoningDepth depends only on evidence, not intent or tex
   assert.equal(reasonIQ.decideReasoningDepth({ text: '', evidence: [] }), 'shallow');
 });
 
+// --- shallow path is a real (cheap) judgment, not a placeholder -----------
+
+test('shallow: an evidence-dependent intent with no evidence reports an honest information gap, not false sufficiency', async () => {
+  const model = { chat: async () => { throw new Error('must not be called'); }, isConfigured: () => true };
+  const result = await reasonIQ.evaluate(
+    { text: 'Why is my website crashing?', intentDecision: { intent: 'inform.explain', status: 'accepted' } },
+    { reasoningModel: model, ...silent }
+  );
+  assert.equal(result.reasoningDepth, 'shallow');
+  assert.equal(result.sufficientForConclusion, false);
+  assert.ok(result.informationGaps.length > 0);
+  assert.ok(result.confidence <= 0.45);
+});
+
+test('shallow: converse and meta.relational intents are not evidence-dependent — no gap, ordinary confidence', async () => {
+  const converse = await reasonIQ.evaluate(
+    { text: 'I just need to vent for a second, long week honestly', intentDecision: { intent: 'converse', status: 'accepted' } },
+    { silent: true }
+  );
+  assert.equal(converse.informationGaps.length, 0);
+  assert.equal(converse.sufficientForConclusion, true);
+  assert.equal(converse.confidence, 0.5);
+});
+
+test('shallow: an unresolved (unknown) intent reports genuine uncertainty and low confidence', async () => {
+  const result = await reasonIQ.evaluate(
+    { text: 'asdkfj alkj qzx', intentDecision: { intent: null, status: 'unknown' } },
+    { silent: true }
+  );
+  assert.equal(result.sufficientForConclusion, false);
+  assert.ok(result.uncertainties.length > 0);
+  assert.equal(result.confidence, 0.25);
+});
+
+test('shallow: no intentDecision at all is treated the same as unknown', async () => {
+  const result = await reasonIQ.evaluate({ text: 'some plain input here' }, { silent: true });
+  assert.equal(result.sufficientForConclusion, false);
+  assert.ok(result.uncertainties.length > 0);
+});
+
+test('shallow: an ambiguous intent reports uncertainty distinct from unknown', async () => {
+  const result = await reasonIQ.evaluate(
+    { text: 'I need you to handle this.', intentDecision: { intent: null, status: 'ambiguous' } },
+    { silent: true }
+  );
+  assert.equal(result.sufficientForConclusion, false);
+  assert.ok(result.uncertainties.length > 0);
+  assert.equal(result.confidence, 0.3);
+});
+
+test('shallow: an ambiguous, evidence-dependent intent combines both signals into the lower confidence', async () => {
+  const result = await reasonIQ.evaluate(
+    { text: 'Should we ship or wait?', intentDecision: { intent: 'decide.support', status: 'ambiguous' } },
+    { silent: true }
+  );
+  assert.ok(result.uncertainties.length > 0);
+  assert.ok(result.informationGaps.length > 0);
+  assert.ok(result.confidence <= 0.3);
+});
+
 // --- reasonIQ.evaluate — happy path structure -----------------------------
 
 test('reasonIQ: deep path returns a fully-shaped ReasoningResult', async () => {

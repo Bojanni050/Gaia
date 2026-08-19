@@ -82,9 +82,17 @@ ReasonIQ has its **own, independently configurable reasoning model**
 (`src/logos/reasoningModelClient.js`, `REASONIQ_MODEL_*` env vars) —
 deliberately not Hermes, not a Gaia capability, and never selected by
 Gaia. It decides per turn whether that model is even worth calling
-(`decideReasoningDepth`); with no model configured, or on an unreachable/
-malformed response, it degrades to an honest, low-confidence result
-rather than guessing or throwing into the turn.
+(`decideReasoningDepth`): **only when `evidence` was actually supplied**
+— intent and text length don't factor in, since without evidence a model
+call can't produce anything the cheap path doesn't already know. That
+cheap path isn't a placeholder either — `shallowResult()` still reads
+IntentIQ's own status and whether an evidence-dependent intent
+(`EVIDENCE_DEPENDENT_INTENTS`: `inform.explain`, `create.transform`,
+`decide.support`, `act.perform`) got any evidence, and reports honest
+uncertainty/information-gaps and a correspondingly lower confidence from
+that alone. With no model configured, or on an unreachable/malformed
+response, ReasonIQ degrades to an honest, low-confidence result rather
+than guessing or throwing into the turn.
 
 **Out of scope this phase** (see the ReasonIQ v0.1 implementation
 report): Hermes, Hindsight, MCP, tool execution, capability routing, and

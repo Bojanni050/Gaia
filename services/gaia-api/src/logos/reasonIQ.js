@@ -31,6 +31,15 @@
  * free. Deep reasoning is therefore triggered by evidence, not by intent
  * or text length — the model *is* the reasoning engine, used only once
  * there is something to use it on.
+ *
+ * "Shallow" is not "do nothing", though — see shallowResult()/
+ * EVIDENCE_DEPENDENT_INTENTS below. Before ever reaching for the model,
+ * ReasonIQ still reads the cheap signals already on hand (IntentIQ's own
+ * status, and whether an evidence-dependent intent got any evidence at
+ * all) to report honest uncertainty and information gaps. Getting more
+ * intelligent than that without a model call is future work, not a gap
+ * in this pass — see the module's own limitations note in the
+ * implementation report.
  */
 
 const crypto = require('crypto');
@@ -80,15 +89,66 @@ function baseResult(overrides) {
   };
 }
 
-/** A turn ReasonIQ judged not to need the reasoning model. Honest, not empty — it still states what it understood. */
+// Intents that plausibly need supporting material to actually conclude
+// anything — a request to explain, transform, decide, or act on
+// something is only as good as what it has to work with. Kept small and
+// legible, same posture as intentIQ.js's own signal sets: a heuristic,
+// not a claim to have reasoned about the specific turn.
+const EVIDENCE_DEPENDENT_INTENTS = new Set(['inform.explain', 'create.transform', 'decide.support', 'act.perform']);
+
+/**
+ * A turn ReasonIQ judged not to need the reasoning model — "shallow"
+ * means "no model call," not "no judgment." It still reads the signals
+ * already on hand (IntentIQ's own status, and whether an evidence-
+ * dependent intent got any) to report honest uncertainty and information
+ * gaps, rather than flattening every such turn to the same unearned 0.5
+ * confidence regardless of what's actually known about it. This is
+ * exactly the kind of cheap, pre-LLM judgment §6 asks ReasonIQ to make —
+ * it just didn't use to make much of one.
+ */
 function shallowResult(input) {
   const text = String(input.text || '').trim();
+  if (!text) {
+    return baseResult({
+      interpretation: 'No interpretable user input was supplied.',
+      reasoningDepth: 'shallow',
+      uncertainties: ['no input text was supplied'],
+      sufficientForConclusion: false,
+      confidence: 0,
+    });
+  }
+
+  const intent = input.intentDecision && input.intentDecision.intent;
+  const status = input.intentDecision && input.intentDecision.status;
+
+  const uncertainties = [];
+  const informationGaps = [];
+  let confidence = 0.5;
+  let sufficientForConclusion = true;
+
+  if (!input.intentDecision || status === 'unknown') {
+    uncertainties.push('what the user is trying to achieve for this turn is unclear');
+    confidence = 0.25;
+    sufficientForConclusion = false;
+  } else if (status === 'ambiguous') {
+    uncertainties.push('multiple interpretations of this turn are plausible and were not resolved');
+    confidence = Math.min(confidence, 0.3);
+    sufficientForConclusion = false;
+  }
+
+  if (intent && EVIDENCE_DEPENDENT_INTENTS.has(intent)) {
+    informationGaps.push('no supporting evidence was supplied for this turn');
+    confidence = Math.min(confidence, 0.45);
+    sufficientForConclusion = false;
+  }
+
   return baseResult({
-    interpretation: text ? `The user said: ${text}` : 'No interpretable user input was supplied.',
+    interpretation: `The user said: ${text}`,
     reasoningDepth: 'shallow',
-    uncertainties: text ? [] : ['no input text was supplied'],
-    sufficientForConclusion: Boolean(text),
-    confidence: text ? 0.5 : 0,
+    uncertainties,
+    informationGaps,
+    sufficientForConclusion,
+    confidence,
   });
 }
 
