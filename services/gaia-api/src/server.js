@@ -6,7 +6,8 @@
  * Contract (kept in lockstep with the desktop's `conversation/turn` seam):
  *   GET  /health             → { ok: true, soulVersion: string }
  *   GET  /soul               → { version: string }   (identity version only)
- *   POST /conversation/turn  → { reply: string }     (auth required)
+ *   POST /conversation/turn  → { reply: string }     (auth required, Desktop's exact contract)
+ *   POST /conversation/turn  → SSE stream            (auth required; { ..., stream: true } — Phase B, docs/web-migration-plan.md)
  *
  * Everything cognitive lives here or behind Hermes; clients send plain
  * turns and render plain replies. Model-agnostic by construction: the
@@ -15,18 +16,25 @@
 const express = require('express');
 const { parseTokens, createAuthMiddleware } = require('./auth');
 const { createHermesClient } = require('./hermesClient');
-const { performTurn } = require('./turn');
+const { createHindsightClient } = require('./hindsightClient');
+const { performTurn, performStreamingTurn } = require('./turn');
 const { loadSoul } = require('./soul');
+const { loadFoundationDocuments } = require('./foundation');
 
 const PORT = Number(process.env.PORT || 8891);
 
 function createApp(env = process.env) {
   const soul = loadSoulWithEnv(env);
   const systemPrompt = soul.prompt;
+  const documents = loadFoundationDocumentsWithEnv(env);
   const hermes = createHermesClient({
     baseUrl: env.HERMES_BASE_URL,
     model: env.HERMES_MODEL || 'hermes-agent',
     authToken: env.HERMES_AUTH_TOKEN,
+  });
+  const hindsight = createHindsightClient({
+    baseUrl: env.HINDSIGHT_URL || 'http://100.64.144.93:8888',
+    bankId: env.HINDSIGHT_BANK_ID || 'gaia',
   });
   const auth = createAuthMiddleware(parseTokens(env.GAIA_API_TOKEN));
 
@@ -52,6 +60,19 @@ function createApp(env = process.env) {
 
   app.post('/conversation/turn', auth, async (req, res) => {
     const messages = req.body && req.body.messages;
+
+    if (req.body && req.body.stream) {
+      await performStreamingTurn({
+        messages,
+        documents,
+        hermes,
+        hindsight,
+        res,
+        conversationId: req.body.conversationId,
+      });
+      return;
+    }
+
     const result = await performTurn({ messages, systemPrompt, hermes });
     res.status(result.status).json(result.body);
   });
@@ -80,6 +101,21 @@ function loadSoulWithEnv(env) {
     }
   }
   return loadSoul();
+}
+
+// Same pattern as loadSoulWithEnv, for foundation-artifact.json.
+function loadFoundationDocumentsWithEnv(env) {
+  if (env.FOUNDATION_ARTIFACT_PATH !== undefined && env !== process.env) {
+    const previous = process.env.FOUNDATION_ARTIFACT_PATH;
+    if (env.FOUNDATION_ARTIFACT_PATH) process.env.FOUNDATION_ARTIFACT_PATH = env.FOUNDATION_ARTIFACT_PATH;
+    try {
+      return loadFoundationDocuments();
+    } finally {
+      if (previous === undefined) delete process.env.FOUNDATION_ARTIFACT_PATH;
+      else process.env.FOUNDATION_ARTIFACT_PATH = previous;
+    }
+  }
+  return loadFoundationDocuments();
 }
 
 if (require.main === module) {

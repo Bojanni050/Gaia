@@ -2,7 +2,25 @@
 
 const test = require('node:test');
 const assert = require('node:assert/strict');
-const { validateMessages, assembleMessages, performTurn } = require('../src/turn');
+const { validateMessages, assembleMessages, performTurn, performStreamingTurn } = require('../src/turn');
+
+function fakeRes() {
+  return {
+    statusCode: null,
+    headers: null,
+    written: [],
+    ended: false,
+    jsonBody: null,
+    writeHead(code, headers) { this.statusCode = code; this.headers = headers; },
+    write(chunk) { this.written.push(chunk); },
+    end() { this.ended = true; },
+    status(code) { this.statusCode = code; return this; },
+    json(body) { this.jsonBody = body; },
+  };
+}
+
+const DOCUMENTS = { 'soul.md': 'SOUL', 'principles.md': 'PRINCIPLES', 'lexicon.md': 'LEXICON' };
+const SILENT_HINDSIGHT = { recall: async () => [], reflect: async () => {} };
 
 test('validateMessages accepts a plain user/assistant history', () => {
   assert.equal(
@@ -80,4 +98,108 @@ test('performTurn rejects an empty Hermes reply', async () => {
     hermes: { chat: async () => '' },
   });
   assert.equal(result.status, 502);
+});
+
+// --- performStreamingTurn (docs/web-migration-plan.md Phase B) -------------
+
+test('performStreamingTurn validates before ever touching the response stream', async () => {
+  const res = fakeRes();
+  await performStreamingTurn({
+    messages: [],
+    documents: DOCUMENTS,
+    hermes: { stream: async () => { throw new Error('must not be called'); } },
+    hindsight: SILENT_HINDSIGHT,
+    res,
+  });
+  assert.equal(res.statusCode, 400);
+  assert.ok(res.jsonBody.error);
+  assert.equal(res.headers, null); // never switched into SSE mode
+});
+
+test('performStreamingTurn streams SSE frames matching the OpenAI delta shape, then [DONE]', async () => {
+  const res = fakeRes();
+  let seenMessages;
+  const hermes = {
+    stream: async (messages, { onDelta }) => {
+      seenMessages = messages;
+      onDelta('Hel', false);
+      onDelta('lo', false);
+      return 'Hello';
+    },
+  };
+
+  await performStreamingTurn({
+    messages: [{ role: 'user', content: 'hi there, how is your day' }],
+    documents: DOCUMENTS,
+    hermes,
+    hindsight: SILENT_HINDSIGHT,
+    res,
+  });
+
+  assert.equal(res.headers['Content-Type'], 'text/event-stream');
+  assert.equal(res.written[0], `data: ${JSON.stringify({ choices: [{ delta: { content: 'Hel' } }] })}\n\n`);
+  assert.equal(res.written.at(-1), 'data: [DONE]\n\n');
+  assert.equal(res.ended, true);
+
+  // Context-aware system prompt, not always-full-SOUL — the parity point
+  // of this migration: a plain conversational turn selects the base three.
+  assert.equal(seenMessages[0].content, 'SOUL\n\n---\n\nPRINCIPLES\n\n---\n\nLEXICON');
+  assert.equal(seenMessages.at(-1).content, 'hi there, how is your day');
+});
+
+test('performStreamingTurn sends a normal JSON error if Hermes fails before any delta', async () => {
+  const res = fakeRes();
+  await performStreamingTurn({
+    messages: [{ role: 'user', content: 'hello there friend' }],
+    documents: DOCUMENTS,
+    hermes: { stream: async () => { throw new Error('hermes responded 401 at http://internal'); } },
+    hindsight: SILENT_HINDSIGHT,
+    res,
+  });
+  assert.equal(res.statusCode, 502);
+  assert.equal(res.jsonBody.error, 'gaia could not answer right now');
+  assert.equal(res.headers, null);
+  assert.ok(!JSON.stringify(res.jsonBody).includes('hermes'));
+});
+
+test('performStreamingTurn just ends the stream if Hermes fails mid-flight, after headers are sent', async () => {
+  const res = fakeRes();
+  await performStreamingTurn({
+    messages: [{ role: 'user', content: 'hello there friend' }],
+    documents: DOCUMENTS,
+    hermes: {
+      stream: async (messages, { onDelta }) => {
+        onDelta('partial', false);
+        throw new Error('connection dropped');
+      },
+    },
+    hindsight: SILENT_HINDSIGHT,
+    res,
+  });
+  assert.equal(res.headers['Content-Type'], 'text/event-stream'); // headers were already sent
+  assert.equal(res.ended, true);
+  assert.ok(!res.written.includes('data: [DONE]\n\n')); // never claims a clean completion
+});
+
+test('performStreamingTurn recalls only when the policy fires, and reflects only on a substantive exchange', async () => {
+  const recallCalls = [];
+  const reflectCalls = [];
+  const hindsight = {
+    recall: async (query) => { recallCalls.push(query); return [{ summary: 'Bo prefers async updates', confidence: 0.9 }]; },
+    reflect: async (item) => { reflectCalls.push(item); },
+  };
+  const hermes = { stream: async (messages, { onDelta }) => { onDelta('ok', false); return 'A real reply here.'; } };
+
+  await performStreamingTurn({
+    messages: [{ role: 'user', content: 'what did we decide about the project database?' }],
+    documents: DOCUMENTS,
+    hermes,
+    hindsight,
+    res: fakeRes(),
+  });
+
+  assert.equal(recallCalls.length, 1); // durable-context signal present
+  await new Promise((resolve) => setImmediate(resolve));
+  assert.equal(reflectCalls.length, 1); // substantive exchange
+  assert.match(reflectCalls[0].summary, /A real reply here\./);
 });

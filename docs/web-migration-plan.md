@@ -247,3 +247,54 @@ No code changes ship with this version. No decision is final until the
 open question in §5 is answered. This does not commit to a timeline —
 it exists so that whenever this work is picked up, the shape of it is
 already known rather than re-discovered.
+
+## Addendum — Phases A and B shipped (2026-08-19, same day)
+
+§5's open question is decided: **option (a)**. Web's browser never holds a
+`gaia-api` token; `gaia-web/nginx.conf.template` injects a Web-specific
+`GAIA_API_TOKEN` server-side (envsubst, mirroring how `gaia-hermes-proxy`
+already injects `HERMES_AUTH_TOKEN`), exactly the same trust model the
+existing Hermes/Hindsight/cognition proxies already use. Verified live:
+`/api/gaia/conversation/turn` returns a real reply with zero auth headers
+sent by the caller.
+
+Phase B is built — a faithful parity port, confirmed with the user rather
+than building real Logos judgment now (§6 stays exactly as deferred).
+`services/gaia-api` gained `foundation.js` (context-aware document
+selection, ported from `deriveIntent`+`FoundationSelector`), `memory.js`
++ `memoryPolicy.js` + `hindsightClient.js` (policy-gated recall/reflection
+— simpler than Web's version since `gaia-api` is already Tailscale-bound
+and calls Hindsight directly, no same-origin proxy trick needed), and
+streaming (`hermesClient.js`'s new `stream()`, relaying the same
+OpenAI-compatible SSE frame shape Web's `HermesProvider._readSse` already
+parses). `POST /conversation/turn` now branches on `{ stream: true }` in
+the request body; the existing non-streaming path (`performTurn`,
+`assembleMessages`) was left **completely untouched** rather than
+extended in place, specifically so Desktop's exact current behavior is
+unaffected by construction, not just by intent. 39/39 tests pass (16
+existing + 23 new). Verified against real infrastructure before pushing:
+a live recall call against the production Hindsight bank from this
+machine (already Tailscale-joined) returned real prior memories — Hermes
+itself isn't reachable from outside the VPS, so that leg was verified via
+the actual VPS deployment instead, the same way every other change this
+session was verified.
+
+**One gap opened by this phase, not present before it, flagged rather
+than silently carried:** `gaia-api`'s Docker build now bakes in
+`foundation-artifact.json` (materialized by a new deploy-time step
+running `scripts/build-foundation-artifact.js`, reusing Cloud's existing
+generator rather than widening `gaia-api`'s build context back to the
+repo root). `.github/workflows/deploy.yml`'s trigger is intentionally
+scoped to `services/gaia-api/**` only (the earlier fix in this same
+document's history) — so a `docs/`-only change updates `Gaia-Web`
+immediately (the cross-repo trigger) but does **not** redeploy `gaia-api`,
+leaving its baked-in foundation content stale until the next unrelated
+`gaia-api` deploy. This mirrors the gap already found and closed for
+`Gaia-Web` — closing it here too (`publish-foundation.yml` also
+triggering `gaia-api`'s own deploy) is a small, well-understood follow-up,
+not done in this pass.
+
+**Nothing in Web calls any of this yet** — Phase C (cutting
+`HermesProvider`/`HindsightProvider` over, retiring the direct
+`/api/hermes/`/`/api/hindsight/` routes) remains fully unstarted, exactly
+per this plan's own phasing.

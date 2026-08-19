@@ -54,6 +54,61 @@ test('hermesClient refuses to construct without a base URL', () => {
   assert.throws(() => createHermesClient({ baseUrl: '', model: 'm' }));
 });
 
+function fakeSseBody(frames) {
+  const encoder = new TextEncoder();
+  return new ReadableStream({
+    start(controller) {
+      for (const frame of frames) controller.enqueue(encoder.encode(frame));
+      controller.close();
+    },
+  });
+}
+
+test('hermesClient.stream relays content and reasoning deltas and resolves with the full text', async () => {
+  const frames = [
+    'data: {"choices":[{"delta":{"content":"Hel"}}]}\n\n',
+    'data: {"choices":[{"delta":{"reasoning_content":"thinking..."}}]}\n\n',
+    'data: {"choices":[{"delta":{"content":"lo"}}]}\n\n',
+    'data: [DONE]\n\n',
+  ];
+  const client = createHermesClient({
+    baseUrl: 'http://hermes.internal:8642/v1',
+    model: 'm',
+    fetchImpl: async (url, init) => {
+      assert.equal(JSON.parse(init.body).stream, true);
+      return { ok: true, body: fakeSseBody(frames) };
+    },
+  });
+
+  const seen = [];
+  const fullText = await client.stream([{ role: 'user', content: 'hi' }], {
+    onDelta: (chunk, isReasoning) => seen.push({ chunk, isReasoning: !!isReasoning }),
+  });
+
+  assert.equal(fullText, 'Hello');
+  assert.deepEqual(seen, [
+    { chunk: 'Hel', isReasoning: false },
+    { chunk: 'thinking...', isReasoning: true },
+    { chunk: 'lo', isReasoning: false },
+  ]);
+});
+
+test('hermesClient.stream throws calmly on a non-ok response or no content', async () => {
+  const failing = createHermesClient({
+    baseUrl: 'http://x/v1',
+    model: 'm',
+    fetchImpl: async () => ({ ok: false, body: null }),
+  });
+  await assert.rejects(() => failing.stream([{ role: 'user', content: 'hi' }]));
+
+  const empty = createHermesClient({
+    baseUrl: 'http://x/v1',
+    model: 'm',
+    fetchImpl: async () => ({ ok: true, body: fakeSseBody(['data: [DONE]\n\n']) }),
+  });
+  await assert.rejects(() => empty.stream([{ role: 'user', content: 'hi' }]));
+});
+
 test('soul loader reads SOUL_PATH and refuses to start empty or missing', () => {
   const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'gaia-soul-'));
   const soulPath = path.join(dir, 'soul.md');
