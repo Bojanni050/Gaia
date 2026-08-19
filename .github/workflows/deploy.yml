@@ -3,6 +3,14 @@ name: deploy
 on:
   push:
     branches: [main]
+    # This resets /root/gaia to origin/main on the VPS unconditionally —
+    # scoped to gaia-api's own path so a docs/proxy/cognition-only push
+    # doesn't also reset the checkout for no reason. (A push that touched
+    # gaia-api *and* something else still runs — paths filters are OR'd
+    # against the changed files, not AND'd.)
+    paths:
+      - 'services/gaia-api/**'
+      - '.github/workflows/deploy.yml'
   workflow_dispatch: {}
 
 jobs:

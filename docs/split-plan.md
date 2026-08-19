@@ -191,3 +191,7 @@ The item flagged above as "explicitly still open" is resolved. `gaia-web`'s buil
 **Acceptance gate re-verified live**, exactly as this plan originally specified: opened `https://higaia.nl` in a real browser, sent a real message, got a real streamed reply that correctly referenced the user by name (Hindsight recall). Network trace confirmed all three calls fired in the one turn: `POST .../hindsight/.../recall` → `200`, `POST .../hermes/v1/chat/completions` → `200`, `POST .../hindsight/.../memories` (reflection) → `200`.
 
 **What's still open:** no CI/CD was set up for `Gaia-Web` (deploy today is the same manual `git pull` + `docker build` + swap pattern used for this cutover, not automated like `gaia-api`'s). Desktop's release build pipeline still doesn't exist. Both remain deliberately out of scope, not silently dropped.
+
+## Addendum — `gaia-api`'s deploy trigger scoped down (2026-08-19, same day)
+
+The sharp edge flagged in the previous addendum — `.github/workflows/deploy.yml` resetting `/root/gaia` on *every* push to `main`, unscoped — is fixed. The `push` trigger now carries `paths: [services/gaia-api/**, .github/workflows/deploy.yml]`, so a `docs/`/`proxy/`/`services/cognition`-only push no longer resets the VPS checkout or rebuilds `gaia-api` for nothing. `workflow_dispatch` is untouched (manual runs still work regardless of what changed). The workflow file itself stays in the path list so an edit to the workflow still runs and can be verified.
