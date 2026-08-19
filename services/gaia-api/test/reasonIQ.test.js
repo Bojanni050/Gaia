@@ -152,6 +152,40 @@ test('reasoningModelClient: chat() maps a failing fetch to a generic error, no U
   });
 });
 
+test('reasoningModelClient: chat() defaults to forcing json_object (ReasonIQ\'s own need)', async () => {
+  let capturedBody;
+  const fakeFetch = async (url, init) => {
+    capturedBody = JSON.parse(init.body);
+    return { ok: true, json: async () => ({ choices: [{ message: { content: '{}' } }] }) };
+  };
+  const client = createReasoningModelClient({ baseUrl: 'http://fake:1234', model: 'm', fetchImpl: fakeFetch });
+  await client.chat([{ role: 'user', content: 'hi' }]);
+  assert.deepEqual(capturedBody.response_format, { type: 'json_object' });
+});
+
+test('reasoningModelClient: chat() omits response_format entirely when explicitly passed null (e.g. OCR)', async () => {
+  let capturedBody;
+  const fakeFetch = async (url, init) => {
+    capturedBody = JSON.parse(init.body);
+    return { ok: true, json: async () => ({ choices: [{ message: { content: 'a plain description' } }] }) };
+  };
+  const client = createReasoningModelClient({ baseUrl: 'http://fake:1234', model: 'm', fetchImpl: fakeFetch });
+  await client.chat([{ role: 'user', content: 'describe this' }], { responseFormat: null });
+  assert.ok(!('response_format' in capturedBody));
+});
+
+test('reasoningModelClient: chat() carries multimodal content-block arrays through untouched', async () => {
+  let capturedBody;
+  const fakeFetch = async (url, init) => {
+    capturedBody = JSON.parse(init.body);
+    return { ok: true, json: async () => ({ choices: [{ message: { content: 'ok' } }] }) };
+  };
+  const client = createReasoningModelClient({ baseUrl: 'http://fake:1234', model: 'm', fetchImpl: fakeFetch });
+  const messages = [{ role: 'user', content: [{ type: 'text', text: 'x' }, { type: 'image_url', image_url: { url: 'data:image/png;base64,AA==' } }] }];
+  await client.chat(messages, { responseFormat: null });
+  assert.deepEqual(capturedBody.messages, messages);
+});
+
 // --- reasonIQ.evaluate — reasoning depth ----------------------------------
 
 function stubModelReturning(jsonBody) {

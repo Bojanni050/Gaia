@@ -59,10 +59,11 @@ function createReasoningModelClient(options = {}) {
   const timeoutMs = options.timeoutMs || DEFAULT_TIMEOUT_MS;
 
   /**
-   * @param {Array<{role: string, content: string}>} messages
-   * @returns {Promise<string>} the raw text content of the completion — ReasonIQ parses/validates it as JSON, this client does not.
+   * @param {Array<{role: string, content: string|Array<object>}>} messages content may be a plain string, or an OpenAI-compatible content-block array (e.g. for image_url blocks — see ocrResolver.js)
+   * @param {{ responseFormat?: object|null }} [options] Defaults to forcing `{type:"json_object"}`, ReasonIQ's own need — omitted from the request entirely, not just unset, when explicitly passed `null` (e.g. a freeform-text caller like OCR that isn't asking ReasonIQ's structured-output question).
+   * @returns {Promise<string>} the raw text content of the completion — the caller parses/validates it, this client does not.
    */
-  async function chat(messages) {
+  async function chat(messages, options = {}) {
     if (!isConfigured(config)) {
       throw new Error('reasoning model not configured (REASONIQ_MODEL_BASE_URL / REASONIQ_MODEL_NAME unset)');
     }
@@ -70,17 +71,16 @@ function createReasoningModelClient(options = {}) {
     const headers = { 'Content-Type': 'application/json' };
     if (config.apiKey) headers.Authorization = `Bearer ${config.apiKey}`;
 
+    const responseFormat = options.responseFormat === undefined ? { type: 'json_object' } : options.responseFormat;
+    const body = { model: config.model, stream: false, messages };
+    if (responseFormat) body.response_format = responseFormat;
+
     let response;
     try {
       response = await fetchImpl(`${config.baseUrl}/chat/completions`, {
         method: 'POST',
         headers,
-        body: JSON.stringify({
-          model: config.model,
-          stream: false,
-          messages,
-          response_format: { type: 'json_object' },
-        }),
+        body: JSON.stringify(body),
         signal: AbortSignal.timeout(timeoutMs),
       });
     } catch (error) {

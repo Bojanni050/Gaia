@@ -97,7 +97,7 @@ function createApp(env = process.env) {
     }
 
     const attachmentIds = (req.body && req.body.attachmentIds) || [];
-    const attachments = resolveAttachmentsForPrompt(libraryStore, attachmentIds);
+    const attachments = await resolveAttachmentsForPrompt(libraryStore, attachmentIds);
     const result = await performTurn({ messages, systemPrompt, hermes, attachments });
     res.status(result.status).json(result.body);
   });

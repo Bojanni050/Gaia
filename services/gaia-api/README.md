@@ -16,7 +16,9 @@ Kept in lockstep with the desktop's seam (`desktop/src/state/contract.js`):
 | GET    | `/soul`             | none | `{ version: string }` — identity version only, no prompt content |
 | POST   | `/conversation/turn`| Bearer | in: `{ messages: [{ role, content }], attachmentIds?: string[] }` → out: `{ reply: string }` |
 
-`attachmentIds` names files already uploaded to the library (`/library/files`) — never file bytes. `library.js`'s `resolveAttachmentsForPrompt` reads each one server-side and, if it's text-decodable, inlines its content into the system prompt as attached context (`turn.js`'s `renderAttachmentContext`); non-text files (images, PDFs — no OCR/extraction capability yet) are noted as attached but not read. Omitting `attachmentIds` produces byte-identical behavior to before this existed — Desktop's contract stays additive, never modified underneath existing callers.
+`attachmentIds` names files already uploaded to the library (`/library/files`) — never file bytes. `library.js`'s `resolveAttachmentsForPrompt` reads each one server-side and inlines it into the system prompt as attached context (`turn.js`'s `renderAttachmentContext`): text files verbatim, images via `ocrResolver.js`'s vision-model step (disclaimer-prefixed — a description is an inference, not a transcript), everything else (PDFs, other binaries — no extraction pipeline for those yet) noted as attached but not read. This resolution happens entirely *before* `performTurn`/ReasonIQ ever see the turn — ReasonIQ reasons over what it's given, it never fetches or transforms a raw attachment itself. Omitting `attachmentIds` produces byte-identical behavior to before this existed — Desktop's contract stays additive, never modified underneath existing callers.
+
+Image OCR reuses ReasonIQ's own configured reasoning model (`/admin`'s OpenRouter model) rather than a separate provider config — if that model isn't multimodal, or isn't configured, image attachments degrade to "not read" exactly like before this existed.
 
 Non-streaming in this phase. The streaming variant grows behind the same
 path (SSE/WebSocket) — clients were built with that seam ready.

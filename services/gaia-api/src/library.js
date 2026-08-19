@@ -7,11 +7,12 @@
  * config store (reasoningModelStore.js), but for file blobs instead of a
  * single JSON record.
  *
- * v1 scope: storage and browsing only. Nothing here reads file content,
- * extracts text, or feeds anything to ReasonIQ/Hermes/Hindsight — that's
- * a deliberate later decision, not an oversight (see principles.md's
- * "Source First": an uploaded document only becomes a source of truth
- * when the user or Gaia explicitly reaches for it, not automatically).
+ * Storage and browsing is the core of this file; resolveAttachmentsForPrompt
+ * (below) additionally turns an attached file into text a turn can use as
+ * context — verbatim for text files, via ocrResolver.js's vision model
+ * for images — but only when a turn explicitly names the file's id
+ * (principles.md's "Source First": a file becomes a source of truth when
+ * reached for, never automatically).
  *
  * One directory per file: `<libraryDir>/<id>/meta.json` + `.../blob`.
  * Deliberately not a single shared index — every operation touches only
@@ -22,6 +23,7 @@
 const fs = require('fs');
 const path = require('path');
 const crypto = require('crypto');
+const { resolveImageText, isImageMime } = require('./ocrResolver');
 
 function resolveLibraryDir(env = process.env) {
   if (env.LIBRARY_PATH) return env.LIBRARY_PATH;
@@ -109,11 +111,12 @@ function createLibraryStore(options = {}) {
   return { saveFile, listFiles, getFile, deleteFile, libraryDir };
 }
 
-// mime types resolved as UTF-8 text and inlined as conversational context.
-// Anything else (images, PDFs, binaries) is stored and referenced but not
-// read — there is no OCR/extraction capability in Gaia yet, and pretending
-// otherwise would mean silently sending garbled bytes to Hermes as if they
-// were prose.
+// mime types resolved as UTF-8 text and inlined as conversational context
+// verbatim. Images go through ocrResolver.js's vision-model step instead
+// (see resolveAttachmentsForPrompt). Everything else (PDFs, other
+// binaries) is stored and referenced but not read — no extraction
+// pipeline for those yet, and pretending otherwise would mean silently
+// sending garbled bytes to Hermes as if they were prose.
 const TEXT_MIME_PREFIXES = ['text/'];
 const TEXT_MIME_EXACT = new Set([
   'application/json',
@@ -129,34 +132,49 @@ function isTextMime(mimeType) {
   return TEXT_MIME_PREFIXES.some((prefix) => mt.startsWith(prefix)) || TEXT_MIME_EXACT.has(mt);
 }
 
+function truncate(content) {
+  if (content.length <= MAX_ATTACHMENT_CHARS) return content;
+  return `${content.slice(0, MAX_ATTACHMENT_CHARS)}\n[truncated — file is longer than ${MAX_ATTACHMENT_CHARS} characters]`;
+}
+
 /**
  * Resolves a turn's attached file ids into `{ filename, content }` pairs
- * ready to be rendered into a prompt (see turn.js's renderAttachmentContext).
- * `content` is `null` when the file isn't text-decodable — the caller
+ * ready to be rendered into a prompt (see turn.js's renderAttachmentContext)
+ * — this is the step that runs *before* performTurn/ReasonIQ ever see the
+ * turn, exactly once, so everything downstream just receives text. Text
+ * files resolve verbatim; images go through ocrResolver.js's vision-model
+ * step (disclaimer-prefixed — a description is an inference, not a
+ * transcript); anything else resolves to `content: null` — the caller
  * still learns the file was attached, just not what's in it. Never
- * throws: a missing or unreadable file is skipped, never breaks the turn
- * (same discipline as memory.js's recall/reflect).
+ * throws: a missing/unreadable file, or a failed OCR call, is skipped or
+ * degrades to null — never breaks the turn (same discipline as
+ * memory.js's recall/reflect).
  * @param {ReturnType<createLibraryStore>} store
  * @param {string[]} ids
- * @returns {Array<{ filename: string, content: string|null }>}
+ * @param {{ ocrModel?: object }} [options] test seam for ocrResolver.js's model client
+ * @returns {Promise<Array<{ filename: string, content: string|null }>>}
  */
-function resolveAttachmentsForPrompt(store, ids) {
+async function resolveAttachmentsForPrompt(store, ids, options = {}) {
   if (!Array.isArray(ids) || ids.length === 0) return [];
   const results = [];
   for (const id of ids) {
+    let resolved;
     try {
-      const { meta, buffer } = store.getFile(id);
-      if (isTextMime(meta.mimeType)) {
-        let content = buffer.toString('utf-8');
-        if (content.length > MAX_ATTACHMENT_CHARS) {
-          content = `${content.slice(0, MAX_ATTACHMENT_CHARS)}\n[truncated — file is longer than ${MAX_ATTACHMENT_CHARS} characters]`;
-        }
-        results.push({ filename: meta.filename, content });
-      } else {
-        results.push({ filename: meta.filename, content: null });
-      }
+      resolved = store.getFile(id);
     } catch (_) {
       // Missing/unreadable attachment — skip silently, never break the turn.
+      continue;
+    }
+    const { meta, buffer } = resolved;
+
+    if (isTextMime(meta.mimeType)) {
+      results.push({ filename: meta.filename, content: truncate(buffer.toString('utf-8')) });
+    } else if (isImageMime(meta.mimeType)) {
+      // eslint-disable-next-line no-await-in-loop
+      const described = await resolveImageText(buffer, meta.mimeType, { model: options.ocrModel });
+      results.push({ filename: meta.filename, content: described ? truncate(described) : null });
+    } else {
+      results.push({ filename: meta.filename, content: null });
     }
   }
   return results;
@@ -167,5 +185,6 @@ module.exports = {
   resolveLibraryDir,
   resolveAttachmentsForPrompt,
   isTextMime,
+  isImageMime,
   LibraryFileNotFoundError,
 };

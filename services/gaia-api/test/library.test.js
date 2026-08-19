@@ -96,38 +96,58 @@ test('isTextMime recognizes text/* and common structured-text types', () => {
   assert.equal(isTextMime(''), false);
 });
 
-test('resolveAttachmentsForPrompt returns [] for no ids, without touching the store', () => {
+test('resolveAttachmentsForPrompt returns [] for no ids, without touching the store', async () => {
   const store = tempStore();
-  assert.deepEqual(resolveAttachmentsForPrompt(store, []), []);
-  assert.deepEqual(resolveAttachmentsForPrompt(store, undefined), []);
+  assert.deepEqual(await resolveAttachmentsForPrompt(store, []), []);
+  assert.deepEqual(await resolveAttachmentsForPrompt(store, undefined), []);
 });
 
-test('resolveAttachmentsForPrompt inlines text-file content', () => {
+test('resolveAttachmentsForPrompt inlines text-file content', async () => {
   const store = tempStore();
   const saved = store.saveFile(Buffer.from('the meeting is at 3pm'), { filename: 'notes.txt', mimeType: 'text/plain' });
-  const [attachment] = resolveAttachmentsForPrompt(store, [saved.id]);
+  const [attachment] = await resolveAttachmentsForPrompt(store, [saved.id]);
   assert.equal(attachment.filename, 'notes.txt');
   assert.equal(attachment.content, 'the meeting is at 3pm');
 });
 
-test('resolveAttachmentsForPrompt reports non-text files without content', () => {
+test('resolveAttachmentsForPrompt reports a non-text, non-image file without content', async () => {
   const store = tempStore();
-  const saved = store.saveFile(Buffer.from([0x89, 0x50, 0x4e, 0x47]), { filename: 'photo.png', mimeType: 'image/png' });
-  const [attachment] = resolveAttachmentsForPrompt(store, [saved.id]);
-  assert.equal(attachment.filename, 'photo.png');
+  const saved = store.saveFile(Buffer.from('%PDF-1.4'), { filename: 'doc.pdf', mimeType: 'application/pdf' });
+  const [attachment] = await resolveAttachmentsForPrompt(store, [saved.id]);
+  assert.equal(attachment.filename, 'doc.pdf');
   assert.equal(attachment.content, null);
 });
 
-test('resolveAttachmentsForPrompt truncates content beyond the character cap', () => {
+test('resolveAttachmentsForPrompt resolves an image via OCR when a vision model is available', async () => {
+  const store = tempStore();
+  const saved = store.saveFile(Buffer.from([0x89, 0x50, 0x4e, 0x47]), { filename: 'photo.png', mimeType: 'image/png' });
+  const ocrModel = { chat: async () => 'a whiteboard with a project timeline', isConfigured: () => true };
+
+  const [attachment] = await resolveAttachmentsForPrompt(store, [saved.id], { ocrModel });
+  assert.equal(attachment.filename, 'photo.png');
+  assert.match(attachment.content, /whiteboard with a project timeline/);
+  assert.match(attachment.content, /AI-generated description/); // the vision disclaimer travels with it
+});
+
+test('resolveAttachmentsForPrompt reports an image without content when no vision model is configured', async () => {
+  const store = tempStore();
+  const saved = store.saveFile(Buffer.from([0x89, 0x50, 0x4e, 0x47]), { filename: 'photo.png', mimeType: 'image/png' });
+  const ocrModel = { chat: async () => { throw new Error('must not be called'); }, isConfigured: () => false };
+
+  const [attachment] = await resolveAttachmentsForPrompt(store, [saved.id], { ocrModel });
+  assert.equal(attachment.content, null);
+});
+
+test('resolveAttachmentsForPrompt truncates content beyond the character cap', async () => {
   const store = tempStore();
   const huge = 'x'.repeat(9000);
   const saved = store.saveFile(Buffer.from(huge), { filename: 'big.txt', mimeType: 'text/plain' });
-  const [attachment] = resolveAttachmentsForPrompt(store, [saved.id]);
+  const [attachment] = await resolveAttachmentsForPrompt(store, [saved.id]);
   assert.ok(attachment.content.length < huge.length);
   assert.match(attachment.content, /truncated/);
 });
 
-test('resolveAttachmentsForPrompt silently skips a missing id rather than throwing', () => {
+test('resolveAttachmentsForPrompt silently skips a missing id rather than throwing', async () => {
   const store = tempStore();
-  assert.deepEqual(resolveAttachmentsForPrompt(store, ['does-not-exist']), []);
+  assert.deepEqual(await resolveAttachmentsForPrompt(store, ['does-not-exist']), []);
 });
