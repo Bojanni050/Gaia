@@ -1,7 +1,7 @@
 ---
 title: Gaia — Architecture
 document: architecture
-version: 2.3.0
+version: 2.3.1
 status: foundation
 last_updated: 2026-08-19
 owner: Gaia Product Foundation
@@ -334,7 +334,7 @@ Gaia Desktop **does not**: perform reasoning, decide what to remember, hold the 
 - **Owns:** Reasoning and model-agnostic provider routing, when Gaia decides reasoning is needed.
 - **Provides:** A streaming reasoning API; orchestration across Hindsight and MCP when reasoning itself requires them; model-agnostic provider selection.
 - **Never:** Decides *whether* it should be invoked — that decision belongs to Gaia. Never becomes the home of identity or memory. Hermes uses SOUL and Hindsight; it does not become them.
-- **Boundary rule:** Providers are internal to Hermes and never surfaced to Gaia Desktop or the user. Hermes is one capability among several — not a special-cased default.
+- **Boundary rule:** Providers are internal to Hermes and never surfaced to Gaia Desktop or the user. Hermes is one capability among several — not a special-cased default. **Hermes's own internal shape — however it decides what kind of reasoning to do, which provider answers, or how it shapes its output — is entirely Hermes's concern and outside Gaia's architectural boundary.** Gaia gives Hermes an explicit task; Hermes executes it and returns a result. Gaia's documentation never describes Hermes's internals, and no Hermes-internal concept is named as if it were part of Gaia's cognition — including one that happens to share a name with a Logos faculty (see evolution.md, "Hermes as a Standalone Capability").
 
 ### 4.6 Melodiq — Music Capability
 
@@ -620,7 +620,7 @@ The core insight, extended: **Gaia is the agency. Logos is Gaia's cognitive reas
 
 This architecture.md is now the foundation. The following documents should be reviewed and updated in this order:
 
-1. **orchestrator.md** — **Done, decided the other way.** IntentIQ and OrchestratorIQ stay Hermes-internal, not folded into Logos: Hermes is a capability Gaia calls, nothing more, and Logos has no connection to it or its internals. orchestrator.md (v1.3.0) now says this explicitly, including the resolution of the `intentIQ` naming collision with Logos's own faculty.
+1. **orchestrator.md** — **Superseded and removed.** An earlier revision of this document decided to keep a Hermes-internal "IntentIQ"/"OrchestratorIQ" pipeline documented, disambiguated from Logos's `intentIQ` by a naming note. That decision is reversed: documenting Hermes's internal reasoning shape in Gaia's own docs — under any name, with any disclaimer — misrepresents Hermes's internals as part of Gaia's architecture and keeps the `intentIQ` naming collision alive. orchestrator.md has been deleted; §4.5's boundary rule now states plainly that Hermes's internal shape is outside Gaia's architectural boundary, full stop. See evolution.md, "Hermes as a Standalone Capability."
 2. **README.md, vision.md, coding-standards.md, roadmap.md, soul.md** — update any remaining "desktop client owns orchestration" or "no speculative backend" language to match §9's revised stance; add hypotheses to any description of what Hindsight holds.
 3. **hermes/soul.md and Hermes documentation** — update to reflect Hermes as one cloud-hosted capability among many.
 4. **intentIQ / reasonIQ docs** — if they exist separately, align with Logos framing, with how Logos consumes hypothesis confidence (§6.1), and with Logos owning all hypothesis/pattern judgment (§6.2).
