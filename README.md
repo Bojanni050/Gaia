@@ -1,9 +1,17 @@
-# Gaia
+# Gaia Cloud
+
 A lifelong personal intelligence.
 
 Gaia is a conversation-first personal intelligence built around identity, understanding and continuity rather than a single AI model.
 
-> **This repository is the dev version of Gaia Cloud.** It currently also contains her frontend (`frontend/`, deployed as `gaia-web`). That frontend will later be moved out into a separate `gaia-desktop` client, once Gaia Cloud has its own proper service boundary (see `docs/evolution.md` for the current, explicitly-flagged interim state — e.g. Logos's `intentIQ`/`reasonIQ` still executing client-side).
+This repository is **Gaia Cloud** — her identity and server-side services. Her clients live in their own repositories: [Gaia Web](https://github.com/Bojanni050/Gaia-Web) (browser) and [Gaia Desktop](https://github.com/Bojanni050/Gaia-Desktop) (native, Tauri). See `docs/split-plan.md` for how and why the split happened, and what's still interim (Web's Logos still runs client-side — a known, explicitly-flagged gap, not an oversight).
+
+## What lives here
+
+- `docs/` — Gaia's constitution and architecture: `soul.md`'s architectural overview, `architecture.md`, `principles.md`, `evolution.md` (the running history of every real milestone), `split-plan.md`.
+- `services/gaia-api/` — the uniform Gaia API: server-side turn orchestration (`POST conversation/turn`), server-side SOUL (canonical `identity/soul.md`), Bearer auth, Hermes orchestration. Desktop's only backend today; Web migrating onto it is later work.
+- `services/cognition/` — patterns and hypotheses, a Hindsight-adjacent sidecar for epistemic content Hindsight itself has no place for (`proposed → testing → confirmed/rejected`).
+- `proxy/` — `gaia-hermes-proxy`: internal nginx fronting `hermes-agent`, injecting its auth token so clients never see it.
 
 ## Core Principles
 
@@ -15,25 +23,20 @@ Gaia is a conversation-first personal intelligence built around identity, unders
 ## Architecture
 
 ```
-Gaia Desktop
-    ↓                           ↓
-ReasoningProvider          MemoryProvider      (the abstractions)
-    ↓                           ↓
-HermesProvider              HindsightProvider  (concrete)
-    ↓                           ↓
-Local Hermes API            Gaia's Hindsight bank (Gaia Cloud)
+Gaia Desktop / Gaia Web
+        │
+        │  services/gaia-api (Desktop today; Web direct for now)
+        ▼
+   ┌─────────────────────────────┐
+   │          GAIA CLOUD          │
+   │   SOUL · Hermes orchestration │
+   │   services/cognition (patterns/hypotheses) │
+   │   proxy/ (hermes auth injection) │
+   └─────────────────────────────┘
 ```
 
-The desktop depends only on contracts — `ReasoningProvider` and `MemoryProvider` — never on a concrete provider. Today those contracts are fulfilled by `HermesProvider` (a local OpenAI-compatible Hermes) and `HindsightProvider` (Gaia's own bank on a real Hindsight instance, plus `services/cognition` for patterns and hypotheses — a Hindsight-adjacent sidecar for the epistemic content Hindsight itself has no place for). Tomorrow's provider is a config change, not a Gaia change.
-
-SOUL (identity), Chronicles (knowledge), and MCP (actions) are explicit future seams. They are not in this milestone.
+Clients depend only on contracts, never on a concrete provider — see `docs/architecture.md` for the full picture (Hermes, Hindsight, capabilities, Logos).
 
 ## Status
 
-Genesis 🌱 → Speaking 💬 → Remembering 🌿
-
-The foundation is complete.
-Gaia speaks — through a real, local reasoning engine, with a streaming conversation, presence transitions, and quiet error phrases.
-Gaia has her own connection to Hindsight — a dedicated memory bank, not shared with any other assistant — and can now hold patterns and hypotheses (confidence, evidence, a `proposed → testing → confirmed/rejected` lifecycle) via `services/cognition`. The desktop now reflects and recalls through it: every turn is informed by relevant memory (best-effort — a slow or unreachable Hindsight never blocks or breaks the conversation) and, once a response completes, the exchange is reflected into Hindsight asynchronously.
-
-Next: hypothesis/pattern reasoning itself (Logos's side of §6.2) — nothing forms or tests a hypothesis automatically yet. Also still missing: the opt-in memory view (architecture §8).
+See `docs/evolution.md` for the full, honest history — what's built, what's deliberately not, and why. As of the Phase 1 repo split (2026-08-19): `services/gaia-api` is live and Desktop's only backend; Web still talks to Hermes/Hindsight/cognition directly and runs Logos (`intentIQ`/`reasonIQ`) client-side, both flagged as known interim states, not decided architecture.

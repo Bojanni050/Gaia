@@ -1,7 +1,0 @@
-{
-  "name": "@gaia/contracts",
-  "version": "0.1.0",
-  "private": true,
-  "description": "Gaia's system contracts — the durable boundaries between SOUL, Hermes, Hindsight, Chronicles, MCP and Gaia's clients.",
-  "main": "src/index.js"
-}
