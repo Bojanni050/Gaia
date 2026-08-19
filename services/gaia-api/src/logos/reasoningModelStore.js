@@ -61,7 +61,7 @@ function createReasoningModelStore(options = {}) {
     fs.writeFileSync(storePath, JSON.stringify(data, null, 2), 'utf-8');
   }
 
-  /** @returns {{ provider: string, baseUrl: string, model: string, apiKey: string, updatedAt: string }|null} */
+  /** @returns {{ provider: string, baseUrl: string, model: string, visionModel: string, apiKey: string, updatedAt: string }|null} */
   function getConfig() {
     return readRaw();
   }
@@ -70,14 +70,20 @@ function createReasoningModelStore(options = {}) {
    * Merges and persists a partial update. `apiKey` is optional on update —
    * omitting it (vs. passing an empty string) keeps the previously stored
    * key, so re-saving a model choice never requires re-entering the key.
-   * @param {{ provider?: string, baseUrl?: string, model?: string, apiKey?: string }} partial
+   * `visionModel` is a separate model id used only for image OCR
+   * (ocrResolver.js) — same provider/baseUrl/apiKey as `model`, since
+   * there's no reason to assume a second OpenRouter account for it.
+   * Falls back to `model` wherever it's left unset (see
+   * reasoningModelConfigResolver.js's resolveVisionModelConfig).
+   * @param {{ provider?: string, baseUrl?: string, model?: string, visionModel?: string, apiKey?: string }} partial
    */
   function saveConfig(partial) {
-    const current = readRaw() || { provider: 'openrouter', baseUrl: 'https://openrouter.ai/api/v1', model: '', apiKey: '' };
+    const current = readRaw() || { provider: 'openrouter', baseUrl: 'https://openrouter.ai/api/v1', model: '', visionModel: '', apiKey: '' };
     const next = {
       provider: partial.provider !== undefined ? partial.provider : current.provider,
       baseUrl: partial.baseUrl !== undefined ? partial.baseUrl : current.baseUrl,
       model: partial.model !== undefined ? partial.model : current.model,
+      visionModel: partial.visionModel !== undefined ? partial.visionModel : (current.visionModel || ''),
       apiKey: partial.apiKey !== undefined ? partial.apiKey : current.apiKey,
       updatedAt: new Date().toISOString(),
     };
@@ -88,11 +94,14 @@ function createReasoningModelStore(options = {}) {
   /** Safe to return to a client — the raw key never leaves this module. */
   function getMaskedConfig() {
     const config = readRaw();
-    if (!config) return { provider: null, baseUrl: null, model: null, hasApiKey: false, maskedApiKey: null, updatedAt: null };
+    if (!config) {
+      return { provider: null, baseUrl: null, model: null, visionModel: null, hasApiKey: false, maskedApiKey: null, updatedAt: null };
+    }
     return {
       provider: config.provider || null,
       baseUrl: config.baseUrl || null,
       model: config.model || null,
+      visionModel: config.visionModel || null,
       hasApiKey: Boolean(config.apiKey),
       maskedApiKey: maskKey(config.apiKey),
       updatedAt: config.updatedAt || null,

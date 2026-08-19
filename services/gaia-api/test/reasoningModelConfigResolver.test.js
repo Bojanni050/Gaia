@@ -2,7 +2,7 @@
 
 const test = require('node:test');
 const assert = require('node:assert/strict');
-const { resolveReasoningModelConfig } = require('../src/logos/reasoningModelConfigResolver');
+const { resolveReasoningModelConfig, resolveVisionModelConfig } = require('../src/logos/reasoningModelConfigResolver');
 
 function fakeStore(config) {
   return { getConfig: () => config };
@@ -33,4 +33,35 @@ test('resolver: a stored config missing baseUrl/provider gets OpenRouter default
   const config = resolveReasoningModelConfig({ store, env: {} });
   assert.equal(config.provider, 'openrouter');
   assert.equal(config.baseUrl, 'https://openrouter.ai/api/v1');
+});
+
+// --- resolveVisionModelConfig (OCR-specific, falls back to ReasonIQ's own) --
+
+test('resolveVisionModelConfig uses visionModel when set, same provider/baseUrl/apiKey as ReasonIQ', () => {
+  const store = fakeStore({
+    provider: 'openrouter', baseUrl: 'https://openrouter.ai/api/v1',
+    model: 'anthropic/claude-3.5-sonnet', visionModel: 'openai/gpt-4o-mini', apiKey: 'sk-or-x',
+  });
+  const config = resolveVisionModelConfig({ store, env: {} });
+  assert.equal(config.model, 'openai/gpt-4o-mini');
+  assert.equal(config.apiKey, 'sk-or-x');
+  assert.equal(config.baseUrl, 'https://openrouter.ai/api/v1');
+});
+
+test('resolveVisionModelConfig falls back to the main model when visionModel is unset', () => {
+  const store = fakeStore({ model: 'anthropic/claude-3.5-sonnet', visionModel: '', apiKey: 'sk-or-x' });
+  const config = resolveVisionModelConfig({ store, env: {} });
+  assert.equal(config.model, 'anthropic/claude-3.5-sonnet');
+});
+
+test('resolveVisionModelConfig falls back to the main model when visionModel is missing entirely', () => {
+  const store = fakeStore({ model: 'anthropic/claude-3.5-sonnet', apiKey: 'sk-or-x' });
+  const config = resolveVisionModelConfig({ store, env: {} });
+  assert.equal(config.model, 'anthropic/claude-3.5-sonnet');
+});
+
+test('resolveVisionModelConfig falls back to env vars when no store/apiKey is available, same as ReasonIQ', () => {
+  const config = resolveVisionModelConfig({ env: { REASONIQ_MODEL_BASE_URL: 'http://x', REASONIQ_MODEL_NAME: 'm' } });
+  assert.equal(config.baseUrl, 'http://x');
+  assert.equal(config.model, 'm');
 });

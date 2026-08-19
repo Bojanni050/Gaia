@@ -12,17 +12,19 @@
  * so this lives beside library.js's other attachment resolution, and
  * runs as a step ahead of the turn, not inside Logos.
  *
- * Reuses ReasonIQ's already-configured reasoning model
- * (logos/reasoningModelClient.js + the /admin-configured OpenRouter
- * model) rather than inventing a third provider config for one more
- * model choice nobody asked for. If that model isn't multimodal, or
- * isn't configured at all, this degrades to "could not be read" — the
- * same honest fallback library.js already used for every image before
- * this file existed. Never throws into the turn.
+ * Uses the same OpenRouter account as ReasonIQ's reasoning model
+ * (logos/reasoningModelClient.js) — same provider/baseUrl/apiKey — but a
+ * separately choosable model id (`/admin`'s "Vision model" field,
+ * resolveVisionModelConfig), since a good reasoning model and a good
+ * vision model aren't always the same model. Falls back to ReasonIQ's own
+ * model when no vision-specific one has been set. If the resolved model
+ * isn't multimodal, or isn't configured at all, this degrades to "could
+ * not be read" — the same honest fallback library.js already used for
+ * every image before this file existed. Never throws into the turn.
  */
 
 const { createReasoningModelClient } = require('./logos/reasoningModelClient');
-const { resolveReasoningModelConfig } = require('./logos/reasoningModelConfigResolver');
+const { resolveVisionModelConfig } = require('./logos/reasoningModelConfigResolver');
 const { createReasoningModelStore } = require('./logos/reasoningModelStore');
 
 const IMAGE_MIME_PREFIX = 'image/';
@@ -52,7 +54,7 @@ function isImageMime(mimeType) {
  * @returns {Promise<string|null>} disclaimer-prefixed extracted text, or null if unavailable
  */
 async function resolveImageText(buffer, mimeType, options = {}) {
-  const model = options.model || createReasoningModelClient(resolveReasoningModelConfig({ store: createReasoningModelStore() }));
+  const model = options.model || createReasoningModelClient(resolveVisionModelConfig({ store: createReasoningModelStore() }));
 
   if (typeof model.isConfigured === 'function' && !model.isConfigured()) {
     return null;

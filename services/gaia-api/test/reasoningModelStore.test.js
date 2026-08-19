@@ -72,3 +72,44 @@ test('clear removes the stored config', () => {
   store.clear();
   assert.equal(store.getConfig(), null);
 });
+
+// --- visionModel (OCR-specific model, separate from ReasonIQ's own) -----
+
+test('saveConfig persists visionModel independently of model', () => {
+  const store = tempStore();
+  store.saveConfig({ apiKey: 'sk-or-x', model: 'anthropic/claude-3.5-sonnet', visionModel: 'openai/gpt-4o-mini' });
+  const config = store.getConfig();
+  assert.equal(config.model, 'anthropic/claude-3.5-sonnet');
+  assert.equal(config.visionModel, 'openai/gpt-4o-mini');
+});
+
+test('saveConfig defaults visionModel to empty when never set', () => {
+  const store = tempStore();
+  store.saveConfig({ apiKey: 'x', model: 'm' });
+  assert.equal(store.getConfig().visionModel, '');
+});
+
+test('saveConfig can clear visionModel back to empty (reuse ReasonIQ\'s model)', () => {
+  const store = tempStore();
+  store.saveConfig({ apiKey: 'x', visionModel: 'openai/gpt-4o-mini' });
+  store.saveConfig({ visionModel: '' });
+  assert.equal(store.getConfig().visionModel, '');
+});
+
+test('saveConfig with only a model update does not clear a previously saved visionModel', () => {
+  const store = tempStore();
+  store.saveConfig({ apiKey: 'x', visionModel: 'openai/gpt-4o-mini' });
+  store.saveConfig({ model: 'new/model' });
+  assert.equal(store.getConfig().visionModel, 'openai/gpt-4o-mini');
+});
+
+test('getMaskedConfig includes visionModel (not a secret, safe to return as-is)', () => {
+  const store = tempStore();
+  store.saveConfig({ apiKey: 'x', visionModel: 'openai/gpt-4o-mini' });
+  assert.equal(store.getMaskedConfig().visionModel, 'openai/gpt-4o-mini');
+});
+
+test('getMaskedConfig reports visionModel: null before anything is saved', () => {
+  const store = tempStore();
+  assert.equal(store.getMaskedConfig().visionModel, null);
+});

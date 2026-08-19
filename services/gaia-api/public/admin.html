@@ -72,6 +72,17 @@
     <button id="saveModelBtn" disabled>Save selection</button>
     <div class="status" id="modelStatus"></div>
   </section>
+
+  <section>
+    <h2>Vision model (image OCR)</h2>
+    <p class="hint" style="margin-top:0;">Used only to read attached images (see ocrResolver.js) — separate from ReasonIQ's own model above, since a good reasoning model and a good vision model aren't always the same one. Leave unset to reuse the ReasonIQ model for images too.</p>
+    <label for="visionModelSelect">Vision model</label>
+    <select id="visionModelSelect"><option value="">— reuse ReasonIQ's model —</option></select>
+    <div class="model-meta" id="visionModelMeta"></div>
+    <button id="saveVisionModelBtn" disabled>Save selection</button>
+    <button id="clearVisionModelBtn" class="secondary">Reuse ReasonIQ's model</button>
+    <div class="status" id="visionModelStatus"></div>
+  </section>
 </main>
 
 <script>
@@ -80,9 +91,12 @@
   const tokenEl = $('token'), apiKeyEl = $('apiKey'), keyHintEl = $('keyHint'), keyStatusEl = $('keyStatus');
   const modelSelectEl = $('modelSelect'), modelMetaEl = $('modelMeta'), modelStatusEl = $('modelStatus');
   const saveKeyBtn = $('saveKeyBtn'), fetchModelsBtn = $('fetchModelsBtn'), saveModelBtn = $('saveModelBtn');
+  const visionModelSelectEl = $('visionModelSelect'), visionModelMetaEl = $('visionModelMeta'), visionModelStatusEl = $('visionModelStatus');
+  const saveVisionModelBtn = $('saveVisionModelBtn'), clearVisionModelBtn = $('clearVisionModelBtn');
 
   let models = [];
   let currentModel = null;
+  let currentVisionModel = null;
 
   tokenEl.value = localStorage.getItem('gaia_admin_token') || '';
   tokenEl.addEventListener('change', () => localStorage.setItem('gaia_admin_token', tokenEl.value));
@@ -102,10 +116,16 @@
       if (!res.ok) return;
       const cfg = await res.json();
       currentModel = cfg.model;
+      currentVisionModel = cfg.visionModel;
       keyHintEl.textContent = cfg.hasApiKey ? ('Key saved: ' + cfg.maskedApiKey) : 'No key saved yet.';
       if (cfg.model) {
         modelSelectEl.innerHTML = '<option value="' + cfg.model + '">' + cfg.model + ' (saved)</option>';
         modelSelectEl.value = cfg.model;
+      }
+      if (cfg.visionModel) {
+        visionModelSelectEl.innerHTML = '<option value="' + cfg.visionModel + '">' + cfg.visionModel + ' (saved)</option>';
+        visionModelSelectEl.value = cfg.visionModel;
+        saveVisionModelBtn.disabled = false;
       }
     } catch (_) { /* ignore on initial load */ }
   }
@@ -141,17 +161,13 @@
       }
       const body = await res.json();
       models = body.models || [];
-      modelSelectEl.innerHTML = '';
-      for (const m of models) {
-        const opt = document.createElement('option');
-        opt.value = m.id;
-        opt.textContent = m.name + ' (' + m.id + ')';
-        modelSelectEl.appendChild(opt);
-      }
-      if (currentModel && models.some((m) => m.id === currentModel)) modelSelectEl.value = currentModel;
+      populateSelect(modelSelectEl, currentModel);
+      populateSelect(visionModelSelectEl, currentVisionModel, true);
       saveModelBtn.disabled = models.length === 0;
+      saveVisionModelBtn.disabled = models.length === 0;
       setStatus(modelStatusEl, models.length + ' models available.', true);
-      updateModelMeta();
+      updateModelMeta(modelSelectEl, modelMetaEl);
+      updateModelMeta(visionModelSelectEl, visionModelMetaEl);
     } catch (err) {
       setStatus(modelStatusEl, 'Could not fetch models: ' + err.message, false);
     } finally {
@@ -159,13 +175,31 @@
     }
   });
 
-  function updateModelMeta() {
-    const m = models.find((x) => x.id === modelSelectEl.value);
-    modelMetaEl.textContent = m
+  function populateSelect(selectEl, selectedId, withEmptyOption) {
+    selectEl.innerHTML = '';
+    if (withEmptyOption) {
+      const empty = document.createElement('option');
+      empty.value = '';
+      empty.textContent = '— reuse ReasonIQ\'s model —';
+      selectEl.appendChild(empty);
+    }
+    for (const m of models) {
+      const opt = document.createElement('option');
+      opt.value = m.id;
+      opt.textContent = m.name + ' (' + m.id + ')';
+      selectEl.appendChild(opt);
+    }
+    if (selectedId && models.some((m) => m.id === selectedId)) selectEl.value = selectedId;
+  }
+
+  function updateModelMeta(selectEl, metaEl) {
+    const m = models.find((x) => x.id === selectEl.value);
+    metaEl.textContent = m
       ? 'context: ' + (m.contextLength || '—') + ' tokens · prompt: ' + (m.pricing.prompt ?? '—') + ' · completion: ' + (m.pricing.completion ?? '—')
       : '';
   }
-  modelSelectEl.addEventListener('change', updateModelMeta);
+  modelSelectEl.addEventListener('change', () => updateModelMeta(modelSelectEl, modelMetaEl));
+  visionModelSelectEl.addEventListener('change', () => updateModelMeta(visionModelSelectEl, visionModelMetaEl));
 
   saveModelBtn.addEventListener('click', async () => {
     if (!modelSelectEl.value) return;
@@ -183,6 +217,29 @@
     } finally {
       saveModelBtn.disabled = false;
     }
+  });
+
+  saveVisionModelBtn.addEventListener('click', async () => {
+    saveVisionModelBtn.disabled = true;
+    try {
+      const res = await fetch('/admin/api/reasoniq/config', {
+        method: 'PUT', headers: authHeaders(),
+        body: JSON.stringify({ visionModel: visionModelSelectEl.value }),
+      });
+      if (!res.ok) throw new Error(await res.text());
+      currentVisionModel = visionModelSelectEl.value;
+      setStatus(visionModelStatusEl, currentVisionModel ? ('Image OCR will use ' + currentVisionModel + '.') : 'Image OCR will reuse ReasonIQ\'s model.', true);
+    } catch (err) {
+      setStatus(visionModelStatusEl, 'Could not save the selection.', false);
+    } finally {
+      saveVisionModelBtn.disabled = false;
+    }
+  });
+
+  clearVisionModelBtn.addEventListener('click', () => {
+    visionModelSelectEl.value = '';
+    updateModelMeta(visionModelSelectEl, visionModelMetaEl);
+    saveVisionModelBtn.click();
   });
 
   if (tokenEl.value) loadConfig();

@@ -16,7 +16,10 @@
  * the standard Bearer auth):
  *   GET  /admin                       -> the static admin page (public shell, no secrets embedded)
  *   GET  /admin/api/reasoniq/config   -> masked current config
- *   PUT  /admin/api/reasoniq/config   -> { provider?, baseUrl?, model?, apiKey? } -> masked config
+ *   PUT  /admin/api/reasoniq/config   -> { provider?, baseUrl?, model?, visionModel?, apiKey? } -> masked config
+ *       `visionModel` is a separate, optional model id used only for
+ *       image OCR (ocrResolver.js) — same OpenRouter account as `model`,
+ *       falls back to `model` when unset.
  *   GET  /admin/api/reasoniq/models   -> fetches the model list from OpenRouter using the stored key
  */
 const express = require('express');
@@ -47,6 +50,7 @@ function createAdminRouter({ store, auth, createOpenRouterClientFn = createOpenR
     if (typeof body.provider === 'string') allowed.provider = body.provider.trim();
     if (typeof body.baseUrl === 'string') allowed.baseUrl = body.baseUrl.trim();
     if (typeof body.model === 'string') allowed.model = body.model.trim();
+    if (typeof body.visionModel === 'string') allowed.visionModel = body.visionModel.trim();
     if (typeof body.apiKey === 'string' && body.apiKey.trim() !== '') allowed.apiKey = body.apiKey.trim();
 
     if (Object.keys(allowed).length === 0) {

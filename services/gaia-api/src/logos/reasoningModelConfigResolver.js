@@ -31,4 +31,24 @@ function resolveReasoningModelConfig(options = {}) {
   return envConfig;
 }
 
-module.exports = { resolveReasoningModelConfig };
+/**
+ * Same resolution as resolveReasoningModelConfig, but for OCR/vision
+ * (ocrResolver.js) — same provider/baseUrl/apiKey (no reason to assume a
+ * second OpenRouter account), but the model id comes from the stored
+ * config's `visionModel`, falling back to the main `model` when
+ * `visionModel` hasn't been set. There is no vision-specific env var —
+ * REASONIQ_MODEL_* alone has no vision/text distinction to make, so the
+ * env fallback path (no admin config saved yet) just reuses whatever
+ * ReasonIQ itself would use.
+ * @param {{ store?: ReturnType<import('./reasoningModelStore').createReasoningModelStore>, env?: NodeJS.ProcessEnv }} [options]
+ */
+function resolveVisionModelConfig(options = {}) {
+  const base = resolveReasoningModelConfig(options);
+  const stored = options.store ? options.store.getConfig() : null;
+  if (stored && stored.apiKey && stored.visionModel) {
+    return { ...base, model: stored.visionModel };
+  }
+  return base;
+}
+
+module.exports = { resolveReasoningModelConfig, resolveVisionModelConfig };

@@ -156,6 +156,34 @@ test('GET /admin/api/reasoniq/models returns the fetched model list once a key i
   }
 });
 
+test('PUT /admin/api/reasoniq/config saves a visionModel independently of model', async () => {
+  const ctx = startTestServer();
+  try {
+    await fetch(`${ctx.baseUrl}/admin/api/reasoniq/config`, {
+      method: 'PUT', headers: authHeaders(), body: JSON.stringify({ apiKey: 'sk-or-x', model: 'anthropic/claude-3.5-sonnet' }),
+    });
+    const res = await fetch(`${ctx.baseUrl}/admin/api/reasoniq/config`, {
+      method: 'PUT', headers: authHeaders(), body: JSON.stringify({ visionModel: 'openai/gpt-4o-mini' }),
+    });
+    const body = await res.json();
+    assert.equal(body.visionModel, 'openai/gpt-4o-mini');
+    assert.equal(body.model, 'anthropic/claude-3.5-sonnet'); // unaffected by the vision-only update
+  } finally {
+    await ctx.close();
+  }
+});
+
+test('GET /admin/api/reasoniq/config reports visionModel: null before anything is saved', async () => {
+  const ctx = startTestServer();
+  try {
+    const res = await fetch(`${ctx.baseUrl}/admin/api/reasoniq/config`, { headers: authHeaders() });
+    const body = await res.json();
+    assert.equal(body.visionModel, null);
+  } finally {
+    await ctx.close();
+  }
+});
+
 test('GET /admin/api/reasoniq/models maps an OpenRouter failure to a calm 502', async () => {
   const ctx = startTestServer();
   try {
