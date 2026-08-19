@@ -44,7 +44,7 @@ function createApp(env = process.env) {
   });
   const hindsight = createHindsightClient({
     baseUrl: env.HINDSIGHT_URL || 'http://100.64.144.93:8888',
-    bankId: env.HINDSIGHT_BANK_ID || 'gaia',
+    bankId: env.HINDSIGHT_BANK_ID || 'bojan',
     budget: env.HINDSIGHT_RECALL_BUDGET || 'mid',
   });
   const auth = createAuthMiddleware(parseTokens(env.GAIA_API_TOKEN));

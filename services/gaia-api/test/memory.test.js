@@ -4,7 +4,15 @@ const test = require('node:test');
 const assert = require('node:assert/strict');
 const { shouldRecall, shouldReflect } = require('../src/memoryPolicy');
 const { createHindsightClient } = require('../src/hindsightClient');
-const { condenseMemoryContext, renderMemoryContext, recallRelevantContext, reflectOnTurn } = require('../src/memory');
+const {
+  condenseMemoryContext,
+  renderMemoryContext,
+  recallRelevantContext,
+  reflectOnTurn,
+  MENTAL_MODEL_IDS,
+  renderMentalModelContext,
+  fetchMentalModelContext,
+} = require('../src/memory');
 
 // --- memoryPolicy: same case list as gaia-web's memoryPolicy.test.js, so
 // this port is checked against the exact behavior already proven correct
@@ -144,6 +152,60 @@ test('hindsightClient refuses to construct without a base URL or bank', () => {
   assert.throws(() => createHindsightClient({ baseUrl: 'http://x', bankId: '' }));
 });
 
+test('hindsightClient.getMentalModel fetches by id and maps the response', async () => {
+  let captured;
+  const client = createHindsightClient({
+    baseUrl: 'http://hindsight.internal:8888',
+    bankId: 'gaia',
+    fetchImpl: async (url, init) => {
+      captured = { url, init };
+      return {
+        ok: true,
+        json: async () => ({
+          id: 'communication-style',
+          name: 'Communication Style',
+          content: 'Bo prefers direct, terse answers.',
+          is_stale: false,
+          last_refreshed_at: '2026-08-19T03:00:00Z',
+        }),
+      };
+    },
+  });
+
+  const model = await client.getMentalModel('communication-style');
+  assert.equal(captured.url, 'http://hindsight.internal:8888/v1/default/banks/gaia/mental-models/communication-style');
+  assert.equal(captured.init.method, 'GET');
+  assert.deepEqual(model, {
+    id: 'communication-style',
+    name: 'Communication Style',
+    content: 'Bo prefers direct, terse answers.',
+    isStale: false,
+    lastRefreshedAt: '2026-08-19T03:00:00Z',
+  });
+});
+
+test('hindsightClient.getMentalModel returns null on failure, 404, or empty content', async () => {
+  const unreachable = createHindsightClient({
+    baseUrl: 'http://x', bankId: 'gaia', fetchImpl: async () => { throw new Error('down'); },
+  });
+  assert.equal(await unreachable.getMentalModel('goals-priorities'), null);
+
+  const notFound = createHindsightClient({
+    baseUrl: 'http://x', bankId: 'gaia', fetchImpl: async () => ({ ok: false, status: 404 }),
+  });
+  assert.equal(await notFound.getMentalModel('goals-priorities'), null);
+
+  const notYetGenerated = createHindsightClient({
+    baseUrl: 'http://x', bankId: 'gaia', fetchImpl: async () => ({ ok: true, json: async () => ({ id: 'x', content: null }) }),
+  });
+  assert.equal(await notYetGenerated.getMentalModel('goals-priorities'), null);
+
+  const stillGenerating = createHindsightClient({
+    baseUrl: 'http://x', bankId: 'gaia', fetchImpl: async () => ({ ok: true, json: async () => ({ id: 'x', content: 'Generating content...' }) }),
+  });
+  assert.equal(await stillGenerating.getMentalModel('goals-priorities'), null);
+});
+
 // --- memory.js orchestration ------------------------------------------------
 
 function reflection(text, final) {
@@ -200,4 +262,58 @@ test('reflectOnTurn skips trivial exchanges and never throws even if Hindsight r
   });
   await new Promise((resolve) => setImmediate(resolve));
   assert.equal(calls, 1);
+});
+
+// --- mental models -----------------------------------------------------
+
+test('renderMentalModelContext returns null when there is nothing to show', () => {
+  assert.equal(renderMentalModelContext([]), null);
+  assert.equal(renderMentalModelContext(null), null);
+  assert.equal(renderMentalModelContext([{ name: 'Empty', content: '   ' }]), null);
+});
+
+test('renderMentalModelContext renders one section per model, named by heading', () => {
+  const block = renderMentalModelContext([
+    { name: 'Communication Style', content: 'Prefers terse, direct answers.' },
+    { name: 'Goals & Priorities', content: 'Shipping the Gaia repo split.' },
+  ]);
+  assert.match(block, /standing understanding of Bo/);
+  assert.match(block, /### Communication Style\nPrefers terse, direct answers\./);
+  assert.match(block, /### Goals & Priorities\nShipping the Gaia repo split\./);
+});
+
+test('fetchMentalModelContext fetches every configured id, drops failures, and caches until the TTL expires', async () => {
+  let calls = 0;
+  // Starts well past the TTL from the module's initial (fetchedAt: 0) cache
+  // state, so the first call in this test is guaranteed to be a real fetch
+  // rather than an accidental hit against that initial empty cache.
+  let clock = 100 * 60 * 1000;
+  const hindsight = {
+    getMentalModel: async (id) => {
+      calls += 1;
+      if (id === MENTAL_MODEL_IDS[0]) return null; // not yet generated
+      return { id, name: id, content: `content for ${id}` };
+    },
+  };
+
+  const first = await fetchMentalModelContext(hindsight, { now: () => clock });
+  assert.equal(calls, MENTAL_MODEL_IDS.length);
+  assert.equal(first.length, MENTAL_MODEL_IDS.length - 1);
+
+  // Well within the TTL: cache hit, no new calls.
+  clock += 60 * 1000;
+  const second = await fetchMentalModelContext(hindsight, { now: () => clock });
+  assert.equal(calls, MENTAL_MODEL_IDS.length);
+  assert.deepEqual(second, first);
+
+  // Past the TTL: refetches.
+  clock += 11 * 60 * 1000;
+  await fetchMentalModelContext(hindsight, { now: () => clock });
+  assert.equal(calls, MENTAL_MODEL_IDS.length * 2);
+});
+
+test('fetchMentalModelContext never throws even if getMentalModel rejects', async () => {
+  const hindsight = { getMentalModel: async () => { throw new Error('unreachable'); } };
+  const models = await fetchMentalModelContext(hindsight, { now: () => Date.now() + 999999999 });
+  assert.deepEqual(models, []);
 });

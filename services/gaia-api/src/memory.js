@@ -12,6 +12,28 @@ const { shouldRecall, shouldReflect } = require('./memoryPolicy');
 const MAX_MEMORY_LINES = 6;
 const UNCERTAIN_CONFIDENCE_THRESHOLD = 0.55;
 
+/**
+ * The 7 standing mental models provisioned on Gaia's `gaia` bank (see
+ * services/gaia-api/scripts/provision-mental-models.js) — each a living,
+ * periodically-refreshed synthesis over Bo's memories, distinct from
+ * per-turn recall above. IDs must match what was provisioned on Hindsight.
+ */
+const MENTAL_MODEL_IDS = [
+  'identity-personal-context',
+  'communication-style',
+  'goals-priorities',
+  'preferences',
+  'relationships-context',
+  'work-projects',
+  'emotional-patterns',
+];
+
+// Mental models only change on a daily cron (or on-demand refresh) — an
+// in-process cache keeps every turn from paying a Hindsight round-trip per
+// model for content that is, in the common case, hours old.
+const MENTAL_MODEL_CACHE_TTL_MS = 10 * 60 * 1000;
+let mentalModelCache = { fetchedAt: 0, models: [] };
+
 function normalizeSummary(text) {
   return (text || '').replace(/\s+/g, ' ').trim();
 }
@@ -101,4 +123,58 @@ function reflectOnTurn(hindsight, { conversationId, userText, assistantText, ass
   });
 }
 
-module.exports = { condenseMemoryContext, renderMemoryContext, recallRelevantContext, reflectOnTurn };
+/**
+ * Renders the cached mental models into one system-message block. Framed as
+ * standing understanding (not a per-query recall) so Gaia treats it as
+ * background insight into who Bo is, not evidence to cite.
+ * @param {Array<{ name: string, content: string }>} models
+ * @returns {string|null}
+ */
+function renderMentalModelContext(models) {
+  const sections = (models || [])
+    .filter((m) => m && m.content && m.content.trim())
+    .map((m) => `### ${m.name}\n${m.content.trim()}`);
+  if (sections.length === 0) return null;
+  return [
+    "This is Gaia's standing understanding of Bo, synthesized over time from",
+    'long-term memory (Hindsight mental models) and refreshed periodically —',
+    'not a transcript of this conversation. Let it inform tone and judgment',
+    'quietly; never quote it back or announce that you are drawing on it.',
+    '',
+    ...sections,
+  ].join('\n');
+}
+
+/**
+ * Best-effort fetch of all mental models, cached in-process
+ * (MENTAL_MODEL_CACHE_TTL_MS). Never throws — same "must not affect the
+ * turn" contract as recallRelevantContext. A model that fails to fetch
+ * (not yet provisioned, Hindsight unreachable, no content generated yet)
+ * is silently omitted rather than failing the whole batch.
+ * @param {ReturnType<import('./hindsightClient').createHindsightClient>} hindsight
+ * @param {{ now?: () => number }} [options] test seam for the cache clock
+ */
+async function fetchMentalModelContext(hindsight, { now = Date.now } = {}) {
+  const nowMs = now();
+  if (nowMs - mentalModelCache.fetchedAt < MENTAL_MODEL_CACHE_TTL_MS) {
+    return mentalModelCache.models;
+  }
+  const results = await Promise.all(
+    MENTAL_MODEL_IDS.map((id) =>
+      hindsight.getMentalModel(id).catch(() => null)
+    )
+  );
+  const models = results.filter(Boolean);
+  mentalModelCache = { fetchedAt: nowMs, models };
+  return models;
+}
+
+module.exports = {
+  condenseMemoryContext,
+  renderMemoryContext,
+  recallRelevantContext,
+  reflectOnTurn,
+  MENTAL_MODEL_IDS,
+  renderMentalModelContext,
+  fetchMentalModelContext,
+};

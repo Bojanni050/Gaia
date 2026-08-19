@@ -36,7 +36,7 @@
  */
 
 const { buildSystemPrompt } = require('./foundation');
-const { recallRelevantContext, renderMemoryContext, reflectOnTurn } = require('./memory');
+const { recallRelevantContext, renderMemoryContext, reflectOnTurn, fetchMentalModelContext, renderMentalModelContext } = require('./memory');
 const { classify: classifyIntent } = require('./logos/intentIQ');
 const { evaluate: evaluateReasoning } = require('./logos/reasonIQ');
 
@@ -164,7 +164,7 @@ function writeSseDelta(res, delta) {
  *   messages: Array<{role: string, content: string}>,
  *   documents: Record<string, string>,
  *   hermes: { stream: Function },
- *   hindsight: { recall: Function, reflect: Function },
+ *   hindsight: { recall: Function, reflect: Function, getMentalModel: Function },
  *   res: import('express').Response,
  *   conversationId?: string,
  *   intentIQ?: (messages: Array, options: object) => object,
@@ -210,10 +210,15 @@ async function performStreamingTurn({ messages, documents, hermes, hindsight, re
     .catch(() => {});
 
   const systemPrompt = buildSystemPrompt(documents, messages);
-  const reflections = await recallRelevantContext(hindsight, userText);
+  const [reflections, mentalModels] = await Promise.all([
+    recallRelevantContext(hindsight, userText),
+    fetchMentalModelContext(hindsight).catch(() => []),
+  ]);
   const memoryBlock = renderMemoryContext(reflections);
+  const mentalModelBlock = renderMentalModelContext(mentalModels);
 
   const systemMessages = [{ role: 'system', content: systemPrompt }];
+  if (mentalModelBlock) systemMessages.push({ role: 'system', content: mentalModelBlock });
   if (memoryBlock) systemMessages.push({ role: 'system', content: memoryBlock });
   const assembled = [...systemMessages, ...messages.map(({ role, content }) => ({ role, content }))];
 

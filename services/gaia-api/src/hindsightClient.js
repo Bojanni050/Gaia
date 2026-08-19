@@ -113,7 +113,43 @@ function createHindsightClient({ baseUrl, bankId, budget = 'mid', fetchImpl = fe
     }
   }
 
-  return { recall, reflect };
+  /**
+   * Fetches one mental model's current content — a standing, periodically
+   * refreshed synthesis (Hindsight refreshes it on its own cron/consolidation
+   * trigger; this call is a plain read, never an LLM call itself). Returns
+   * null rather than throwing on any failure (unreachable, 404, empty
+   * content) so a caller can treat "not available yet" and "call failed"
+   * the same way.
+   * @param {string} mentalModelId
+   * @returns {Promise<{ id: string, name: string, content: string, isStale: boolean, lastRefreshedAt: string|null }|null>}
+   */
+  async function getMentalModel(mentalModelId) {
+    let response;
+    try {
+      response = await fetchImpl(bankUrl(`/mental-models/${mentalModelId}`), {
+        method: 'GET',
+        headers,
+        signal: AbortSignal.timeout(timeoutMs),
+      });
+    } catch (_) {
+      return null;
+    }
+    if (!response.ok) return null;
+    const data = await response.json();
+    // A freshly created (or currently refreshing) mental model reports this
+    // exact placeholder string as its content before the async generation
+    // finishes — treat it the same as "no content yet", not a real summary.
+    if (!data.content || data.content === 'Generating content...') return null;
+    return {
+      id: data.id,
+      name: data.name,
+      content: data.content,
+      isStale: Boolean(data.is_stale),
+      lastRefreshedAt: data.last_refreshed_at || null,
+    };
+  }
+
+  return { recall, reflect, getMentalModel };
 }
 
 module.exports = { createHindsightClient };
