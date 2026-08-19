@@ -37,3 +37,12 @@ jobs:
           fi
         env:
           GH_TOKEN: ${{ github.token }}
+
+      # The default github.token can't trigger workflows in another repo,
+      # so this closes the loop Gaia-Web's README flags as a known gap:
+      # a docs/soul.md change here now rebuilds Gaia-Web immediately
+      # instead of waiting for its next unrelated deploy.
+      - name: Trigger a Gaia-Web rebuild
+        run: gh workflow run deploy.yml --repo Bojanni050/Gaia-Web
+        env:
+          GH_TOKEN: ${{ secrets.CROSS_REPO_TOKEN }}
