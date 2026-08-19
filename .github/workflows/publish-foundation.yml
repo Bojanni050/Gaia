@@ -1,0 +1,39 @@
+name: publish-foundation
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - 'docs/**'
+      - 'services/gaia-api/identity/soul.md'
+      - 'scripts/build-foundation-artifact.js'
+      - '.github/workflows/publish-foundation.yml'
+  workflow_dispatch: {}
+
+jobs:
+  publish:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Build foundation-artifact.json
+        run: node scripts/build-foundation-artifact.js
+
+      # A single moving "foundation-latest" release is what clients pull
+      # from at build time (docs/split-plan.md's "clients pull it, pinned"
+      # direction — pinning itself is a client-side choice, this just
+      # always publishes the current one). --clobber overwrites the asset
+      # in place rather than erroring on "already exists".
+      - name: Publish (or update) the foundation-latest release
+        run: |
+          if gh release view foundation-latest > /dev/null 2>&1; then
+            gh release upload foundation-latest foundation-artifact.json --clobber
+          else
+            gh release create foundation-latest foundation-artifact.json \
+              --title "foundation-latest" \
+              --notes "Auto-published from docs/ + services/gaia-api/identity/soul.md. Always the current content — not a stable version to pin against by itself; see the artifact's soul.md front-matter for SOUL's own version field."
+          fi
+        env:
+          GH_TOKEN: ${{ github.token }}
