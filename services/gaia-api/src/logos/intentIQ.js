@@ -3,8 +3,9 @@
 /**
  * Logos.IntentIQ v0.1 — "what is the user trying to achieve?"
  *
- * Boundary (architecture.md §4.2, orchestrator.md's scope note): IntentIQ
- * interprets a turn and hands back an IntentDecision. It never chooses a
+ * Boundary (architecture.md §4.2 — Logos is Gaia's cognitive layer; Hermes
+ * is a standalone capability Gaia may task, never a home for IntentIQ).
+ * IntentIQ interprets a turn and hands back an IntentDecision. It never chooses a
  * model or provider, never calls Hermes or any other capability, never
  * writes memory, never generates the final response, and never makes
  * Gaia's agency decision. This module has no dependency on hermesClient.js
