@@ -298,3 +298,13 @@ not done in this pass.
 `HermesProvider`/`HindsightProvider` over, retiring the direct
 `/api/hermes/`/`/api/hindsight/` routes) remains fully unstarted, exactly
 per this plan's own phasing.
+
+**Live-verified after deploy, through the full public chain
+(`https://higaia.nl/api/gaia/...`, Phase A's route):** the non-streaming
+path replied identically to before (Desktop regression check); the
+streaming path returned real SSE frames ending in `[DONE]`; and a
+technical/deployment-signal query's reply visibly drew on
+`architecture.md` content ("Hindsight strictly persists and retrieves...
+Logos performs all cognitive reasoning") — direct proof the context-aware
+document selection correctly routed that query to include `architecture.md`,
+not just that the code runs without error.
