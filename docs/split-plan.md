@@ -195,3 +195,11 @@ The item flagged above as "explicitly still open" is resolved. `gaia-web`'s buil
 ## Addendum — `gaia-api`'s deploy trigger scoped down (2026-08-19, same day)
 
 The sharp edge flagged in the previous addendum — `.github/workflows/deploy.yml` resetting `/root/gaia` on *every* push to `main`, unscoped — is fixed. The `push` trigger now carries `paths: [services/gaia-api/**, .github/workflows/deploy.yml]`, so a `docs/`/`proxy/`/`services/cognition`-only push no longer resets the VPS checkout or rebuilds `gaia-api` for nothing. `workflow_dispatch` is untouched (manual runs still work regardless of what changed). The workflow file itself stays in the path list so an edit to the workflow still runs and can be verified.
+
+## Addendum — CI/CD added to `Gaia-Web` (2026-08-19, same day)
+
+One of the two items the cutover addendum left open is done: `Gaia-Web/.github/workflows/deploy.yml` now auto-deploys on push to `main`, mirroring `gaia-api`'s test-then-deploy pattern but adapted for a static build + container swap rather than `docker compose`. Test job: `yarn build:web` + `yarn test`. Deploy job (SSH, same VPS/key as `gaia-api`'s workflow): `git reset --hard origin/main` in `/root/gaia-web`, `docker build`, tag the outgoing image `gaia-web:previous` before overwriting `:latest`, swap the container, then a post-swap health check (`curl -sf http://127.0.0.1:8090/`) that auto-rolls back to `gaia-web:previous` on failure — the same rollback shape used by hand during the original cutover, now automated.
+
+**Blocked on the user:** this needs `DEPLOY_HOST`/`DEPLOY_USER`/`DEPLOY_SSH_KEY` repo secrets added to `Gaia-Web` on GitHub — Actions secrets don't carry over between repos, so `gaia-api`'s existing secrets in `Gaia-Cloud` don't apply here. No `gh` CLI or GitHub API access was available to set these directly; the first CI run will fail at the deploy step (test job passes regardless) until they're added.
+
+Desktop's release build pipeline is still the one remaining item from that list — still not done.
