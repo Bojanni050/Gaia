@@ -23,6 +23,16 @@
  * A call that omits it produces byte-identical output to before — nothing
  * about assembleMessages itself changes, and no shape Desktop already
  * depends on is touched.
+ *
+ * Chat history (conversationStore.js) is saved as a fire-and-forget side
+ * effect after a turn succeeds — deliberately NOT inside performTurn
+ * itself (that stays the minimal, unchanged reply-producing function;
+ * server.js's route handler does the save for the non-streaming path,
+ * right after calling performTurn). performStreamingTurn already has this
+ * shape for reflectOnTurn, so its own history save lives inline here,
+ * alongside it, gated the same optional-param way as hindsight/intentIQ/
+ * reasonIQ — omitting `historyStore` skips saving entirely, no behavior
+ * change for a caller that doesn't pass one.
  */
 
 const { buildSystemPrompt } = require('./foundation');
@@ -159,9 +169,10 @@ function writeSseDelta(res, delta) {
  *   conversationId?: string,
  *   intentIQ?: (messages: Array, options: object) => object,
  *   reasonIQ?: (input: object, options: object) => Promise<object>,
+ *   historyStore?: { saveConversation: (id: string, messages: Array) => void },
  * }} input
  */
-async function performStreamingTurn({ messages, documents, hermes, hindsight, res, conversationId, intentIQ = classifyIntent, reasonIQ = evaluateReasoning }) {
+async function performStreamingTurn({ messages, documents, hermes, hindsight, res, conversationId, intentIQ = classifyIntent, reasonIQ = evaluateReasoning, historyStore }) {
   const problem = validateMessages(messages);
   if (problem) {
     res.status(400).json({ error: problem });
@@ -239,6 +250,18 @@ async function performStreamingTurn({ messages, documents, hermes, hindsight, re
   res.end();
 
   reflectOnTurn(hindsight, { conversationId, userText, assistantText: fullText });
+
+  // Chat history — the raw transcript, never Hindsight's job (see this
+  // file's module comment). Never allowed to affect the already-sent
+  // response; a missing/invalid conversationId or a storage failure is
+  // silently skipped, exactly like reflectOnTurn's own failure mode.
+  if (historyStore && conversationId) {
+    try {
+      historyStore.saveConversation(conversationId, [...messages, { role: 'assistant', content: fullText }]);
+    } catch (_) {
+      // Never break a turn that already completed successfully.
+    }
+  }
 }
 
 module.exports = { validateMessages, assembleMessages, performTurn, performStreamingTurn, renderAttachmentContext };

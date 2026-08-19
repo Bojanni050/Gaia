@@ -14,11 +14,25 @@ Kept in lockstep with the desktop's seam (`desktop/src/state/contract.js`):
 |--------|---------------------|------|---------------|
 | GET    | `/health` (and `/`) | none | `{ ok: true, soulVersion: string }` |
 | GET    | `/soul`             | none | `{ version: string }` — identity version only, no prompt content |
-| POST   | `/conversation/turn`| Bearer | in: `{ messages: [{ role, content }], attachmentIds?: string[] }` → out: `{ reply: string }` |
+| POST   | `/conversation/turn`| Bearer | in: `{ messages: [{ role, content }], attachmentIds?: string[], conversationId?: string }` → out: `{ reply: string }` |
 
 `attachmentIds` names files already uploaded to the library (`/library/files`) — never file bytes. `library.js`'s `resolveAttachmentsForPrompt` reads each one server-side and inlines it into the system prompt as attached context (`turn.js`'s `renderAttachmentContext`): text files verbatim, images via `ocrResolver.js`'s vision-model step (disclaimer-prefixed — a description is an inference, not a transcript), everything else (PDFs, other binaries — no extraction pipeline for those yet) noted as attached but not read. This resolution happens entirely *before* `performTurn`/ReasonIQ ever see the turn — ReasonIQ reasons over what it's given, it never fetches or transforms a raw attachment itself. Omitting `attachmentIds` produces byte-identical behavior to before this existed — Desktop's contract stays additive, never modified underneath existing callers.
 
 Image OCR reuses ReasonIQ's own configured reasoning model (`/admin`'s OpenRouter model) rather than a separate provider config — if that model isn't multimodal, or isn't configured, image attachments degrade to "not read" exactly like before this existed.
+
+`conversationId` (the client's own thread id — Desktop already generates one per thread) triggers a fire-and-forget save of the full transcript, including the reply, after a successful turn (`conversationStore.js`). This is deliberately **not** Hindsight: architecture.md is explicit that Hindsight stores reflections, never the raw transcript — chat history is the literal log a person reopens to keep reading, a different job with its own store. Omitting `conversationId` skips saving entirely; the reply is unaffected either way.
+
+## Chat history
+
+A separate surface (`conversationStore.js`, `historyRoutes.js`) from the library — same one-directory-per-item layout (`meta.json` + `messages.json`, no shared index), but read/delete only; writing only ever happens as the side effect described above, never by direct client upload:
+
+| Method | Path                    | Auth   | Body / Result |
+|--------|-------------------------|--------|----------------|
+| GET    | `/conversations`        | Bearer | `{ conversations: [{ id, title, createdAt, updatedAt, messageCount }] }`, newest first |
+| GET    | `/conversations/:id`    | Bearer | `{ meta, messages: [{ role, content }] }` |
+| DELETE | `/conversations/:id`    | Bearer | 204 |
+
+`id` is the client-supplied `conversationId`, validated against a strict allowlist (`[A-Za-z0-9_-]{1,128}`) before ever touching the filesystem — it's used directly as a directory name, so a malformed or path-traversal id is rejected (404), never silently sanitized. Title is derived once, from the first user message, and stays stable across later turns.
 
 Non-streaming in this phase. The streaming variant grows behind the same
 path (SSE/WebSocket) — clients were built with that seam ready.
@@ -47,9 +61,11 @@ normal sense — see `adminRoutes.js`):
 | Method | Path                          | Auth   | Body / Result |
 |--------|-------------------------------|--------|----------------|
 | GET    | `/admin`                      | none   | the static ReasonIQ model-config page (`public/admin.html`) |
-| GET    | `/admin/api/reasoniq/config`  | Bearer | masked config: `{ provider, baseUrl, model, hasApiKey, maskedApiKey, updatedAt }` |
-| PUT    | `/admin/api/reasoniq/config`  | Bearer | in: `{ provider?, baseUrl?, model?, apiKey? }` → out: masked config |
-| GET    | `/admin/api/reasoniq/models`  | Bearer | `{ models: [{ id, name, contextLength, pricing }] }`, fetched live from OpenRouter using the saved key |
+| GET    | `/admin/api/reasoniq/config`  | Bearer | masked config: `{ provider, baseUrl, model, visionModel, hasApiKey, maskedApiKey, updatedAt }` |
+| PUT    | `/admin/api/reasoniq/config`  | Bearer | in: `{ provider?, baseUrl?, model?, visionModel?, apiKey? }` → out: masked config |
+| GET    | `/admin/api/reasoniq/models`  | Bearer | `{ models: [{ id, name, contextLength, pricing }] }`, fetched live from OpenRouter using the saved key — feeds both the ReasonIQ model picker and the vision-model picker |
+
+`visionModel` is a separate, optional model id used only for image OCR (`ocrResolver.js`) — same OpenRouter account as `model` (no reason to assume a second API key), but independently choosable since a good reasoning model and a good vision model aren't always the same one. Left unset, image OCR reuses `model` (`reasoningModelConfigResolver.js`'s `resolveVisionModelConfig`).
 
 ## Boundaries
 

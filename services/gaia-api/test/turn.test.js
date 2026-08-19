@@ -400,3 +400,80 @@ test('performStreamingTurn wires the real ReasonIQ by default and never throws',
 
   assert.equal(res.written.at(-1), 'data: [DONE]\n\n');
 });
+
+// --- performStreamingTurn history save (chat history, never Hindsight) ---
+
+test('performStreamingTurn saves the full transcript (including the reply) when a historyStore and conversationId are given', async () => {
+  const saved = [];
+  const historyStore = { saveConversation: (id, messages) => saved.push({ id, messages }) };
+  const hermes = { stream: async (messages, { onDelta }) => { onDelta('ok', false); return 'A real reply.'; } };
+
+  await performStreamingTurn({
+    messages: [{ role: 'user', content: 'hello there friend' }],
+    documents: DOCUMENTS,
+    hermes,
+    hindsight: SILENT_HINDSIGHT,
+    res: fakeRes(),
+    conversationId: 'conv-1',
+    historyStore,
+  });
+
+  assert.equal(saved.length, 1);
+  assert.equal(saved[0].id, 'conv-1');
+  assert.deepEqual(saved[0].messages, [
+    { role: 'user', content: 'hello there friend' },
+    { role: 'assistant', content: 'A real reply.' },
+  ]);
+});
+
+test('performStreamingTurn does not save history without a conversationId, even with a historyStore given', async () => {
+  let called = false;
+  const historyStore = { saveConversation: () => { called = true; } };
+  const hermes = { stream: async (messages, { onDelta }) => { onDelta('ok', false); return 'A reply.'; } };
+
+  await performStreamingTurn({
+    messages: [{ role: 'user', content: 'hello there friend' }],
+    documents: DOCUMENTS,
+    hermes,
+    hindsight: SILENT_HINDSIGHT,
+    res: fakeRes(),
+    historyStore,
+  });
+
+  assert.equal(called, false);
+});
+
+test('performStreamingTurn completes normally without a historyStore at all (backward compatible)', async () => {
+  const res = fakeRes();
+  const hermes = { stream: async (messages, { onDelta }) => { onDelta('ok', false); return 'A reply.'; } };
+
+  await performStreamingTurn({
+    messages: [{ role: 'user', content: 'hello there friend' }],
+    documents: DOCUMENTS,
+    hermes,
+    hindsight: SILENT_HINDSIGHT,
+    res,
+    conversationId: 'conv-1',
+    // historyStore omitted entirely
+  });
+
+  assert.equal(res.written.at(-1), 'data: [DONE]\n\n');
+});
+
+test('performStreamingTurn completes normally even if historyStore.saveConversation throws', async () => {
+  const res = fakeRes();
+  const historyStore = { saveConversation: () => { throw new Error('disk full'); } };
+  const hermes = { stream: async (messages, { onDelta }) => { onDelta('ok', false); return 'A reply.'; } };
+
+  await performStreamingTurn({
+    messages: [{ role: 'user', content: 'hello there friend' }],
+    documents: DOCUMENTS,
+    hermes,
+    hindsight: SILENT_HINDSIGHT,
+    res,
+    conversationId: 'conv-1',
+    historyStore,
+  });
+
+  assert.equal(res.written.at(-1), 'data: [DONE]\n\n');
+});

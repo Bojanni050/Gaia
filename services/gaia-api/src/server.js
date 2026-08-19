@@ -10,6 +10,8 @@
  *   POST /conversation/turn  → SSE stream            (auth required; { ..., stream: true } — Phase B, docs/web-migration-plan.md)
  *   /admin/*                 → operator-only ReasonIQ model configuration (adminRoutes.js) — never part of any client's contract
  *   /library/*               → file library: upload/list/download/delete (libraryRoutes.js), auth required
+ *   /conversations/*         → chat history: list/read/delete (historyRoutes.js), auth required — written as a
+ *                              fire-and-forget side effect of a successful /conversation/turn, never by direct upload
  *
  * Everything cognitive lives here or behind Hermes; clients send plain
  * turns and render plain replies. Model-agnostic by construction: the
@@ -26,6 +28,8 @@ const { createAdminRouter } = require('./adminRoutes');
 const { createReasoningModelStore } = require('./logos/reasoningModelStore');
 const { createLibraryStore, resolveAttachmentsForPrompt } = require('./library');
 const { createLibraryRouter } = require('./libraryRoutes');
+const { createConversationStore } = require('./conversationStore');
+const { createHistoryRouter } = require('./historyRoutes');
 
 const PORT = Number(process.env.PORT || 8891);
 
@@ -81,8 +85,12 @@ function createApp(env = process.env) {
     })
   );
 
+  const historyStore = createConversationStore(env.HISTORY_PATH !== undefined ? { historyDir: env.HISTORY_PATH } : {});
+  app.use('/conversations', createHistoryRouter({ store: historyStore, auth }));
+
   app.post('/conversation/turn', auth, async (req, res) => {
     const messages = req.body && req.body.messages;
+    const conversationId = req.body && req.body.conversationId;
 
     if (req.body && req.body.stream) {
       await performStreamingTurn({
@@ -91,7 +99,8 @@ function createApp(env = process.env) {
         hermes,
         hindsight,
         res,
-        conversationId: req.body.conversationId,
+        conversationId,
+        historyStore,
       });
       return;
     }
@@ -100,6 +109,19 @@ function createApp(env = process.env) {
     const attachments = await resolveAttachmentsForPrompt(libraryStore, attachmentIds);
     const result = await performTurn({ messages, systemPrompt, hermes, attachments });
     res.status(result.status).json(result.body);
+
+    // Chat history — fire-and-forget, after the response is already sent,
+    // never Hindsight's job (see conversationStore.js's module comment).
+    // performTurn stays the minimal, unchanged function; this side effect
+    // lives here, not inside it, for the same reason performStreamingTurn
+    // keeps reflectOnTurn's save separate from producing the reply.
+    if (result.status === 200 && conversationId) {
+      try {
+        historyStore.saveConversation(conversationId, [...messages, { role: 'assistant', content: result.body.reply }]);
+      } catch (_) {
+        // Never surface a history-write failure as a turn failure.
+      }
+    }
   });
 
   // Calm JSON error surface — no stack traces, no provider names.
