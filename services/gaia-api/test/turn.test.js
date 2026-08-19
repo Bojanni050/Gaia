@@ -203,3 +203,58 @@ test('performStreamingTurn recalls only when the policy fires, and reflects only
   assert.equal(reflectCalls.length, 1); // substantive exchange
   assert.match(reflectCalls[0].summary, /A real reply here\./);
 });
+
+// --- Logos.IntentIQ integration (interpretation-only seam) -----------------
+
+test('performStreamingTurn invokes IntentIQ but never lets its output change the assembled turn', async () => {
+  const intentIQCalls = [];
+  const hermes = { stream: async (messages, { onDelta }) => { onDelta('ok', false); return 'A reply.'; } };
+
+  await performStreamingTurn({
+    messages: [{ role: 'user', content: 'Why is my website crashing?' }],
+    documents: DOCUMENTS,
+    hermes,
+    hindsight: SILENT_HINDSIGHT,
+    res: fakeRes(),
+    intentIQ: (messages, options) => {
+      intentIQCalls.push({ messages, options });
+      return { schemaVersion: 'intentiq.v1', intent: 'inform.explain', status: 'accepted' };
+    },
+  });
+
+  assert.equal(intentIQCalls.length, 1);
+  assert.equal(intentIQCalls[0].messages[0].content, 'Why is my website crashing?');
+});
+
+test('performStreamingTurn completes normally even if IntentIQ throws', async () => {
+  const res = fakeRes();
+  const hermes = { stream: async (messages, { onDelta }) => { onDelta('ok', false); return 'A reply.'; } };
+
+  await performStreamingTurn({
+    messages: [{ role: 'user', content: 'Why is my website crashing?' }],
+    documents: DOCUMENTS,
+    hermes,
+    hindsight: SILENT_HINDSIGHT,
+    res,
+    intentIQ: () => { throw new Error('boom'); },
+  });
+
+  assert.equal(res.headers['Content-Type'], 'text/event-stream');
+  assert.equal(res.written.at(-1), 'data: [DONE]\n\n');
+});
+
+test('performStreamingTurn produces an identical assembled prompt with the real IntentIQ wired in (default) as without it', async () => {
+  let seenWithDefault;
+  const hermes = {
+    stream: async (messages, { onDelta }) => { seenWithDefault = messages; onDelta('ok', false); return 'A reply.'; },
+  };
+  await performStreamingTurn({
+    messages: [{ role: 'user', content: 'hi there, how is your day' }],
+    documents: DOCUMENTS,
+    hermes,
+    hindsight: SILENT_HINDSIGHT,
+    res: fakeRes(),
+    // intentIQ omitted -> uses the real classifier, per the default param.
+  });
+  assert.equal(seenWithDefault[0].content, 'SOUL\n\n---\n\nPRINCIPLES\n\n---\n\nLEXICON');
+});

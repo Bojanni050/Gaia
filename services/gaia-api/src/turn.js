@@ -19,6 +19,7 @@
 
 const { buildSystemPrompt } = require('./foundation');
 const { recallRelevantContext, renderMemoryContext, reflectOnTurn } = require('./memory');
+const { classify: classifyIntent } = require('./logos/intentIQ');
 
 const ALLOWED_ROLES = new Set(['user', 'assistant', 'system']);
 
@@ -116,13 +117,26 @@ function writeSseDelta(res, delta) {
  *   hindsight: { recall: Function, reflect: Function },
  *   res: import('express').Response,
  *   conversationId?: string,
+ *   intentIQ?: (messages: Array, options: object) => object,
  * }} input
  */
-async function performStreamingTurn({ messages, documents, hermes, hindsight, res, conversationId }) {
+async function performStreamingTurn({ messages, documents, hermes, hindsight, res, conversationId, intentIQ = classifyIntent }) {
   const problem = validateMessages(messages);
   if (problem) {
     res.status(400).json({ error: problem });
     return;
+  }
+
+  // Logos: IntentIQ observes the turn and produces an IntentDecision.
+  // Dev-logged for inspection only (see logos/intentLog.js) — it does not
+  // yet drive document selection, recall, or capability routing, matching
+  // the same "seam only, no behavior change" posture Logos's earlier
+  // client-side intentIQ/reasonIQ were introduced with (evolution.md,
+  // Milestone 7b). Never allowed to throw into the turn path.
+  try {
+    intentIQ(messages, { contextId: conversationId });
+  } catch (_) {
+    // Observability must never take down a real conversational turn.
   }
 
   const systemPrompt = buildSystemPrompt(documents, messages);

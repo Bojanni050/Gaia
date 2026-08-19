@@ -33,6 +33,27 @@ path (SSE/WebSocket) — clients were built with that seam ready.
 - **Fail closed.** Without `GAIA_API_TOKEN` every authenticated route
   returns 503; wrong tokens get 401.
 
+## Logos.IntentIQ (v0.1)
+
+`src/logos/intentIQ.js` — Gaia's first real IntentIQ, living in Gaia Cloud
+per architecture.md rather than as a client-side heuristic. It answers
+exactly one question, "what is the user trying to achieve?", against the
+approved Intent Taxonomy v0.1 (`src/logos/intentTaxonomy.js`), and returns
+a structured `IntentDecision` (`schemaVersion: "intentiq.v1"`). It never
+calls Hermes, chooses a model/provider, executes a capability, or writes
+memory — see `test/intentIQ.test.js`'s boundary tests, which assert this
+directly rather than just documenting it.
+
+Wired into `performStreamingTurn` (turn.js) as an **observe-and-log seam
+only** — every streaming turn is classified and the decision is dev-logged
+(`src/logos/intentLog.js`), but nothing about document selection, recall,
+or the Hermes call changes based on it yet. This matches how Logos's
+earlier client-side intentIQ/reasonIQ were introduced (evolution.md,
+Milestone 7b) — establish the seam, observe it, wire it into a real
+decision later once there's a Gaia-side decision layer to consume it.
+
+Run the synthetic evaluation set: `npm run eval:intent` (see `eval/README.md`).
+
 ## Run (dev)
 
 ```bash
