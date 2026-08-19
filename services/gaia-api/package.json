@@ -12,6 +12,7 @@
     "eval:reason": "node eval/run-reason.js"
   },
   "dependencies": {
-    "express": "^4.19.2"
+    "express": "^4.19.2",
+    "multer": "^2.0.0"
   }
 }

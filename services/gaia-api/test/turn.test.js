@@ -2,7 +2,7 @@
 
 const test = require('node:test');
 const assert = require('node:assert/strict');
-const { validateMessages, assembleMessages, performTurn, performStreamingTurn } = require('../src/turn');
+const { validateMessages, assembleMessages, performTurn, performStreamingTurn, renderAttachmentContext } = require('../src/turn');
 
 function fakeRes() {
   return {
@@ -98,6 +98,59 @@ test('performTurn rejects an empty Hermes reply', async () => {
     hermes: { chat: async () => '' },
   });
   assert.equal(result.status, 502);
+});
+
+// --- performTurn attachments (additive, backward-compatible) -------------
+
+test('renderAttachmentContext returns null for no attachments', () => {
+  assert.equal(renderAttachmentContext(undefined), null);
+  assert.equal(renderAttachmentContext([]), null);
+});
+
+test('renderAttachmentContext inlines readable content and notes unreadable files', () => {
+  const block = renderAttachmentContext([
+    { filename: 'notes.txt', content: 'the quarterly numbers look good' },
+    { filename: 'photo.png', content: null },
+  ]);
+  assert.match(block, /--- notes\.txt ---/);
+  assert.match(block, /the quarterly numbers look good/);
+  assert.match(block, /--- photo\.png ---/);
+  assert.match(block, /could not be read as text/);
+});
+
+test('performTurn without attachments produces byte-identical output to before this feature existed', async () => {
+  let seenMessages;
+  const hermes = { chat: async (messages) => { seenMessages = messages; return 'hi there'; } };
+  await performTurn({ messages: [{ role: 'user', content: 'hello' }], systemPrompt: 'SOUL', hermes });
+  assert.equal(seenMessages[0].content, 'SOUL');
+});
+
+test('performTurn with attachments folds them into the system prompt Hermes sees', async () => {
+  let seenMessages;
+  const hermes = { chat: async (messages) => { seenMessages = messages; return 'hi there'; } };
+  await performTurn({
+    messages: [{ role: 'user', content: 'what does this say?' }],
+    systemPrompt: 'SOUL',
+    hermes,
+    attachments: [{ filename: 'notes.txt', content: 'meeting is at 3pm' }],
+  });
+  assert.match(seenMessages[0].content, /^SOUL/);
+  assert.match(seenMessages[0].content, /meeting is at 3pm/);
+  assert.equal(seenMessages[0].role, 'system');
+  assert.equal(seenMessages.length, 2); // still exactly one system message + the user turn
+});
+
+test('performTurn with only unreadable attachments still mentions them without fabricated content', async () => {
+  let seenMessages;
+  const hermes = { chat: async (messages) => { seenMessages = messages; return 'hi there'; } };
+  await performTurn({
+    messages: [{ role: 'user', content: 'what is in the image?' }],
+    systemPrompt: 'SOUL',
+    hermes,
+    attachments: [{ filename: 'photo.png', content: null }],
+  });
+  assert.match(seenMessages[0].content, /photo\.png/);
+  assert.match(seenMessages[0].content, /could not be read as text/);
 });
 
 // --- performStreamingTurn (docs/web-migration-plan.md Phase B) -------------

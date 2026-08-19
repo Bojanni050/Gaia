@@ -14,10 +14,29 @@ Kept in lockstep with the desktop's seam (`desktop/src/state/contract.js`):
 |--------|---------------------|------|---------------|
 | GET    | `/health` (and `/`) | none | `{ ok: true, soulVersion: string }` |
 | GET    | `/soul`             | none | `{ version: string }` — identity version only, no prompt content |
-| POST   | `/conversation/turn`| Bearer | in: `{ messages: [{ role, content }] }` → out: `{ reply: string }` |
+| POST   | `/conversation/turn`| Bearer | in: `{ messages: [{ role, content }], attachmentIds?: string[] }` → out: `{ reply: string }` |
+
+`attachmentIds` names files already uploaded to the library (`/library/files`) — never file bytes. `library.js`'s `resolveAttachmentsForPrompt` reads each one server-side and, if it's text-decodable, inlines its content into the system prompt as attached context (`turn.js`'s `renderAttachmentContext`); non-text files (images, PDFs — no OCR/extraction capability yet) are noted as attached but not read. Omitting `attachmentIds` produces byte-identical behavior to before this existed — Desktop's contract stays additive, never modified underneath existing callers.
 
 Non-streaming in this phase. The streaming variant grows behind the same
 path (SSE/WebSocket) — clients were built with that seam ready.
+
+Also part of the client contract, a **file library** (`library.js`,
+`libraryRoutes.js`) — storage and browsing only in this phase, nothing
+here feeds ReasonIQ, Hermes, or Hindsight yet:
+
+| Method | Path                  | Auth   | Body / Result |
+|--------|-----------------------|--------|----------------|
+| POST   | `/library/files`      | Bearer | multipart, field `file` → `{ id, filename, mimeType, size, uploadedAt }` |
+| GET    | `/library/files`      | Bearer | `{ files: [...] }` |
+| GET    | `/library/files/:id`  | Bearer | raw file bytes, `Content-Type`/`Content-Disposition` from stored metadata |
+| DELETE | `/library/files/:id`  | Bearer | 204 |
+
+Files persist on disk under `LIBRARY_PATH` (default `data/library/`,
+same persistent volume as `reasoningModelStore.js`'s admin config — see
+`docker-compose.yml`). One directory per file (`meta.json` + `blob`), no
+shared index to corrupt under concurrent writes. Capped at
+`LIBRARY_MAX_FILE_SIZE_MB` (default 25MB) per upload.
 
 Separately, an **operator-only admin surface** (never part of the client
 contract above, never reachable from Gaia Desktop or Gaia Web in the

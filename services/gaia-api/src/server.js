@@ -6,9 +6,10 @@
  * Contract (kept in lockstep with the desktop's `conversation/turn` seam):
  *   GET  /health             → { ok: true, soulVersion: string }
  *   GET  /soul               → { version: string }   (identity version only)
- *   POST /conversation/turn  → { reply: string }     (auth required, Desktop's exact contract)
+ *   POST /conversation/turn  → { reply: string }     (auth required, Desktop's exact contract; optional { attachmentIds: [...] } inlines library files as context)
  *   POST /conversation/turn  → SSE stream            (auth required; { ..., stream: true } — Phase B, docs/web-migration-plan.md)
  *   /admin/*                 → operator-only ReasonIQ model configuration (adminRoutes.js) — never part of any client's contract
+ *   /library/*               → file library: upload/list/download/delete (libraryRoutes.js), auth required
  *
  * Everything cognitive lives here or behind Hermes; clients send plain
  * turns and render plain replies. Model-agnostic by construction: the
@@ -23,6 +24,8 @@ const { loadSoul } = require('./soul');
 const { loadFoundationDocuments } = require('./foundation');
 const { createAdminRouter } = require('./adminRoutes');
 const { createReasoningModelStore } = require('./logos/reasoningModelStore');
+const { createLibraryStore, resolveAttachmentsForPrompt } = require('./library');
+const { createLibraryRouter } = require('./libraryRoutes');
 
 const PORT = Number(process.env.PORT || 8891);
 
@@ -67,6 +70,17 @@ function createApp(env = process.env) {
   );
   app.use('/admin', createAdminRouter({ store: reasoningModelStore, auth }));
 
+  const libraryStore = createLibraryStore(env.LIBRARY_PATH !== undefined ? { libraryDir: env.LIBRARY_PATH } : {});
+  const libraryMaxFileSizeMb = Number(env.LIBRARY_MAX_FILE_SIZE_MB) || undefined;
+  app.use(
+    '/library',
+    createLibraryRouter({
+      store: libraryStore,
+      auth,
+      ...(libraryMaxFileSizeMb ? { maxFileSizeMb: libraryMaxFileSizeMb } : {}),
+    })
+  );
+
   app.post('/conversation/turn', auth, async (req, res) => {
     const messages = req.body && req.body.messages;
 
@@ -82,7 +96,9 @@ function createApp(env = process.env) {
       return;
     }
 
-    const result = await performTurn({ messages, systemPrompt, hermes });
+    const attachmentIds = (req.body && req.body.attachmentIds) || [];
+    const attachments = resolveAttachmentsForPrompt(libraryStore, attachmentIds);
+    const result = await performTurn({ messages, systemPrompt, hermes, attachments });
     res.status(result.status).json(result.body);
   });
 

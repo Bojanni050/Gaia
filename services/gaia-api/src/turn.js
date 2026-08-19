@@ -15,6 +15,14 @@
  * parity port of Web's client-side turn lifecycle: context-aware document
  * selection, policy-gated recall/reflection, streaming) — it does not
  * modify performTurn/assembleMessages or anything Desktop depends on.
+ *
+ * performTurn's own contract is extended additively, the same way: an
+ * optional `attachments` param (already-resolved library files — see
+ * library.js's resolveAttachmentsForPrompt, called by server.js before
+ * performTurn is reached) folds into the system prompt only when present.
+ * A call that omits it produces byte-identical output to before — nothing
+ * about assembleMessages itself changes, and no shape Desktop already
+ * depends on is touched.
  */
 
 const { buildSystemPrompt } = require('./foundation');
@@ -60,20 +68,51 @@ function assembleMessages(systemPrompt, messages) {
 }
 
 /**
+ * Renders resolved attachments into a system-message block, in the same
+ * calm, "use only what applies" register as memory.js's
+ * renderMemoryContext — a file being attached is not an instruction to
+ * force it into the reply.
+ * @param {Array<{ filename: string, content: string|null }>} attachments
+ * @returns {string|null}
+ */
+function renderAttachmentContext(attachments) {
+  if (!attachments || attachments.length === 0) return null;
+  const blocks = attachments.map(({ filename, content }) =>
+    content
+      ? `--- ${filename} ---\n${content}`
+      : `--- ${filename} ---\n(this file's content could not be read as text and is not included here)`
+  );
+  return [
+    "The user has attached the following file(s) from their library as context for this turn.",
+    'Use them only where genuinely relevant; do not force them in, and do not announce that you are reading an attachment.',
+    '',
+    ...blocks,
+  ].join('\n');
+}
+
+/**
  * Performs one conversational turn.
  *
- * @param {{ messages: Array<{role: string, content: string}>, systemPrompt: string, hermes: { chat: (messages: Array) => Promise<string> } }} input
+ * @param {{
+ *   messages: Array<{role: string, content: string}>,
+ *   systemPrompt: string,
+ *   hermes: { chat: (messages: Array) => Promise<string> },
+ *   attachments?: Array<{ filename: string, content: string|null }>,
+ * }} input
  * @returns {Promise<{status: number, body: object}>} an HTTP-shaped result
  */
-async function performTurn({ messages, systemPrompt, hermes }) {
+async function performTurn({ messages, systemPrompt, hermes, attachments }) {
   const problem = validateMessages(messages);
   if (problem) {
     return { status: 400, body: { error: problem } };
   }
 
+  const attachmentBlock = renderAttachmentContext(attachments);
+  const fullSystemPrompt = attachmentBlock ? `${systemPrompt}\n\n---\n\n${attachmentBlock}` : systemPrompt;
+
   let reply;
   try {
-    reply = await hermes.chat(assembleMessages(systemPrompt, messages));
+    reply = await hermes.chat(assembleMessages(fullSystemPrompt, messages));
   } catch (_) {
     // Calm and generic on purpose: transport details, provider names and
     // status codes never reach the client.
@@ -202,4 +241,4 @@ async function performStreamingTurn({ messages, documents, hermes, hindsight, re
   reflectOnTurn(hindsight, { conversationId, userText, assistantText: fullText });
 }
 
-module.exports = { validateMessages, assembleMessages, performTurn, performStreamingTurn };
+module.exports = { validateMessages, assembleMessages, performTurn, performStreamingTurn, renderAttachmentContext };

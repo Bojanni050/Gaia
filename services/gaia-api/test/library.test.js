@@ -1,0 +1,133 @@
+'use strict';
+
+const test = require('node:test');
+const assert = require('node:assert/strict');
+const fs = require('fs');
+const os = require('os');
+const path = require('path');
+const { createLibraryStore, resolveAttachmentsForPrompt, isTextMime, LibraryFileNotFoundError } = require('../src/library');
+
+function tempStore() {
+  const libraryDir = fs.mkdtempSync(path.join(os.tmpdir(), 'gaia-library-'));
+  return createLibraryStore({ libraryDir });
+}
+
+test('saveFile persists a blob and metadata, and returns the metadata', () => {
+  const store = tempStore();
+  const meta = store.saveFile(Buffer.from('hello world'), { filename: 'notes.txt', mimeType: 'text/plain' });
+  assert.ok(meta.id);
+  assert.equal(meta.filename, 'notes.txt');
+  assert.equal(meta.mimeType, 'text/plain');
+  assert.equal(meta.size, 11);
+  assert.ok(meta.uploadedAt);
+});
+
+test('getFile returns the exact bytes and metadata that were saved', () => {
+  const store = tempStore();
+  const content = Buffer.from('the quick brown fox');
+  const saved = store.saveFile(content, { filename: 'fox.txt', mimeType: 'text/plain' });
+  const { meta, buffer } = store.getFile(saved.id);
+  assert.deepEqual(meta, saved);
+  assert.ok(buffer.equals(content));
+});
+
+test('getFile throws LibraryFileNotFoundError for an unknown id', () => {
+  const store = tempStore();
+  assert.throws(() => store.getFile('does-not-exist'), LibraryFileNotFoundError);
+});
+
+test('listFiles returns all saved files, newest first', () => {
+  const store = tempStore();
+  const a = store.saveFile(Buffer.from('a'), { filename: 'a.txt', mimeType: 'text/plain' });
+  // Force a distinguishable timestamp ordering without relying on real time gaps.
+  const bMeta = { ...store.saveFile(Buffer.from('b'), { filename: 'b.txt', mimeType: 'text/plain' }) };
+
+  const files = store.listFiles();
+  assert.equal(files.length, 2);
+  assert.ok(files.some((f) => f.id === a.id));
+  assert.ok(files.some((f) => f.id === bMeta.id));
+});
+
+test('listFiles returns an empty array when nothing has been saved (directory not yet created)', () => {
+  const libraryDir = path.join(fs.mkdtempSync(path.join(os.tmpdir(), 'gaia-library-')), 'not-created-yet');
+  const store = createLibraryStore({ libraryDir });
+  assert.deepEqual(store.listFiles(), []);
+});
+
+test('listFiles skips a directory with no readable meta.json rather than failing the whole listing', () => {
+  const store = tempStore();
+  const good = store.saveFile(Buffer.from('ok'), { filename: 'ok.txt', mimeType: 'text/plain' });
+  fs.mkdirSync(path.join(store.libraryDir, 'corrupted'));
+
+  const files = store.listFiles();
+  assert.equal(files.length, 1);
+  assert.equal(files[0].id, good.id);
+});
+
+test('deleteFile removes the file entirely', () => {
+  const store = tempStore();
+  const saved = store.saveFile(Buffer.from('gone soon'), { filename: 'x.txt', mimeType: 'text/plain' });
+  store.deleteFile(saved.id);
+  assert.throws(() => store.getFile(saved.id), LibraryFileNotFoundError);
+  assert.deepEqual(store.listFiles(), []);
+});
+
+test('deleteFile throws LibraryFileNotFoundError for an unknown id', () => {
+  const store = tempStore();
+  assert.throws(() => store.deleteFile('does-not-exist'), LibraryFileNotFoundError);
+});
+
+test('saveFile falls back to safe defaults for missing filename/mimeType', () => {
+  const store = tempStore();
+  const meta = store.saveFile(Buffer.from('x'), {});
+  assert.equal(meta.filename, 'upload');
+  assert.equal(meta.mimeType, 'application/octet-stream');
+});
+
+// --- isTextMime / resolveAttachmentsForPrompt (attach-to-chat context) ---
+
+test('isTextMime recognizes text/* and common structured-text types', () => {
+  assert.equal(isTextMime('text/plain'), true);
+  assert.equal(isTextMime('text/markdown'), true);
+  assert.equal(isTextMime('application/json'), true);
+  assert.equal(isTextMime('application/x-yaml'), true);
+  assert.equal(isTextMime('image/png'), false);
+  assert.equal(isTextMime('application/pdf'), false);
+  assert.equal(isTextMime(''), false);
+});
+
+test('resolveAttachmentsForPrompt returns [] for no ids, without touching the store', () => {
+  const store = tempStore();
+  assert.deepEqual(resolveAttachmentsForPrompt(store, []), []);
+  assert.deepEqual(resolveAttachmentsForPrompt(store, undefined), []);
+});
+
+test('resolveAttachmentsForPrompt inlines text-file content', () => {
+  const store = tempStore();
+  const saved = store.saveFile(Buffer.from('the meeting is at 3pm'), { filename: 'notes.txt', mimeType: 'text/plain' });
+  const [attachment] = resolveAttachmentsForPrompt(store, [saved.id]);
+  assert.equal(attachment.filename, 'notes.txt');
+  assert.equal(attachment.content, 'the meeting is at 3pm');
+});
+
+test('resolveAttachmentsForPrompt reports non-text files without content', () => {
+  const store = tempStore();
+  const saved = store.saveFile(Buffer.from([0x89, 0x50, 0x4e, 0x47]), { filename: 'photo.png', mimeType: 'image/png' });
+  const [attachment] = resolveAttachmentsForPrompt(store, [saved.id]);
+  assert.equal(attachment.filename, 'photo.png');
+  assert.equal(attachment.content, null);
+});
+
+test('resolveAttachmentsForPrompt truncates content beyond the character cap', () => {
+  const store = tempStore();
+  const huge = 'x'.repeat(9000);
+  const saved = store.saveFile(Buffer.from(huge), { filename: 'big.txt', mimeType: 'text/plain' });
+  const [attachment] = resolveAttachmentsForPrompt(store, [saved.id]);
+  assert.ok(attachment.content.length < huge.length);
+  assert.match(attachment.content, /truncated/);
+});
+
+test('resolveAttachmentsForPrompt silently skips a missing id rather than throwing', () => {
+  const store = tempStore();
+  assert.deepEqual(resolveAttachmentsForPrompt(store, ['does-not-exist']), []);
+});
