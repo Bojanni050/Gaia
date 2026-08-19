@@ -3,7 +3,7 @@ title: Gaia — Architecture
 document: architecture
 version: 2.3.0
 status: foundation
-last_updated: 2026-08-16
+last_updated: 2026-08-19
 owner: Gaia Product Foundation
 framing: "Gaia is a lifelong personal intelligence designed to grow through understanding."
 ---
@@ -620,7 +620,7 @@ The core insight, extended: **Gaia is the agency. Logos is Gaia's cognitive reas
 
 This architecture.md is now the foundation. The following documents should be reviewed and updated in this order:
 
-1. **orchestrator.md** — recontextualize IntentIQ and OrchestratorIQ under Logos (intentIQ + reasonIQ within Logos, not as Hermes-internal layers); already done for v2.0.0, re-check for cloud/client language.
+1. **orchestrator.md** — **Done, decided the other way.** IntentIQ and OrchestratorIQ stay Hermes-internal, not folded into Logos: Hermes is a capability Gaia calls, nothing more, and Logos has no connection to it or its internals. orchestrator.md (v1.3.0) now says this explicitly, including the resolution of the `intentIQ` naming collision with Logos's own faculty.
 2. **README.md, vision.md, coding-standards.md, roadmap.md, soul.md** — update any remaining "desktop client owns orchestration" or "no speculative backend" language to match §9's revised stance; add hypotheses to any description of what Hindsight holds.
 3. **hermes/soul.md and Hermes documentation** — update to reflect Hermes as one cloud-hosted capability among many.
 4. **intentIQ / reasonIQ docs** — if they exist separately, align with Logos framing, with how Logos consumes hypothesis confidence (§6.1), and with Logos owning all hypothesis/pattern judgment (§6.2).

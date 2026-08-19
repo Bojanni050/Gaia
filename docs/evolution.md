@@ -582,6 +582,21 @@ The actual constitution — the "You are Gaia…" document with her character, c
 
 ---
 
+## Amendment — Hermes Severed from Logos: A Tool, Nothing More
+
+**Context.** `orchestrator.md` described IntentIQ and OrchestratorIQ as a pipeline running "inside Hermes," then spent a full paragraph disambiguating that pipeline's `IntentIQ` from Logos's own `intentIQ` faculty — explaining that Logos's `intentIQ` decides *whether* Hermes is called, while Hermes's `IntentIQ` decides *how Hermes reasons* once it's called, and calling the two "downstream" of each other. `docs/README.md`'s index repeated the same framing verbatim ("both inside Hermes, downstream of Logos"). `architecture.md` §16 even carried a standing to-do to go further and merge IntentIQ/OrchestratorIQ *into* Logos. Read plainly, all of this describes a real architectural relationship between Logos and Hermes — a hand-off, a dependency, a shared judgment structure — when the rest of the architecture (§4.5, §5.2: "Logos → depends on → SOUL," full stop) already says Hermes is one interchangeable capability among several, no different in standing from Melodiq or MCP.
+
+**What changed.**
+
+- `docs/orchestrator.md` (now v1.3.0) — retitled to name what it actually documents: **Hermes's Internal Reasoning Pipeline**. The opening now states plainly that Hermes is a capability Gaia may call, nothing more, and that this document records Hermes's own internal shape for the record — not because Gaia's cognition depends on it. The former "note on scope" and "implementation note," which spent two paragraphs relating this pipeline to Logos's `intentIQ`/`reasonIQ`, are replaced by one paragraph stating there is no connection: the naming similarity between Hermes's internal `IntentIQ` and Logos's `intentIQ` is coincidental, not architectural. The closing "Relationship to Gaia's Structure" section now says outright: "Hermes is a tool Gaia can use — nothing more, ... If Hermes were replaced by a different reasoning capability tomorrow, this entire document would be replaced with it; nothing about Logos, SOUL, or any other part of Gaia would need to change."
+- The OrchestratorIQ routing step's hardcoded provider list ("Hermes, GPT, Venice, DeepSeek") was removed — it was also self-referential (Hermes's own router listing "Hermes" as one of its routing targets) and reintroduced the hardcoded-model-brand problem earlier amendments removed elsewhere.
+- `docs/README.md`'s document index no longer says "downstream of Logos"; it now says IntentIQ/OrchestratorIQ are "private to Hermes's own internals, unconnected to Logos."
+- `architecture.md` §16's to-do to fold IntentIQ/OrchestratorIQ into Logos is marked done, decided the other way — kept Hermes-internal, explicitly, rather than merged.
+
+**Why this matters.** Logos exists so Gaia's own cognition survives any single capability being replaced, retired, or having a bad day. A document that ties Logos's naming, judgment structure, or "downstream" position to Hermes's internals — even just rhetorically, even while insisting they're separate — undermines that by inviting exactly the reading it was trying to prevent. The fix isn't a clearer disambiguation paragraph; it's removing the thing being disambiguated. Hermes gets to have whatever internal reasoning shape it wants, same as any capability; none of it is Gaia's concern, and none of it should read as though it were.
+
+---
+
 ## How to Read This Document
 
 Each milestone records:

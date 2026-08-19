@@ -1,32 +1,32 @@
 ---
-title: Gaia — IntentIQ & OrchestratorIQ
+title: Gaia — Hermes's Internal Reasoning Pipeline (IntentIQ & OrchestratorIQ)
 document: orchestrator
-version: 1.2.0
+version: 1.3.0
 status: active
-last_updated: 2026-08-16
+last_updated: 2026-08-19
 owner: Gaia Product Foundation
 framing: "Gaia is a lifelong personal intelligence designed to grow through understanding."
 ---
 
-# Gaia — IntentIQ & OrchestratorIQ
+# Gaia — Hermes's Internal Reasoning Pipeline (IntentIQ & OrchestratorIQ)
 
-> **Gaia never thinks in terms of "censored" or "uncensored."** She thinks in terms of *which reasoning approach best matches the user's intent.* IntentIQ and OrchestratorIQ are the two judgment layers that make that possible without ever compromising who she is.
+> **Hermes is a capability Gaia may call — nothing more.** Like any capability, what happens once she calls it is Hermes's own concern. This document describes that internal concern for the record; it is not part of Gaia's own cognition and has no connection to Logos.
 
 ---
 
 ## Why This Document Exists
 
-This document describes a reasoning pipeline that runs **inside Hermes**, once Hermes has been chosen as the capability for a turn:
+Hermes is one of Gaia's capabilities (architecture.md §4.5) — an instrument she reaches for, through her own orchestration, when a turn needs reasoning. What happens *inside* Hermes once she has made that call is Hermes's own internal shape, not Gaia's. This document records that internal shape, purely so it's understood and reviewable — the same way any capability's internals might be documented — not because Gaia's own reasoning depends on it.
+
+Inside Hermes, once invoked, a pipeline runs:
 
 ```
 Intent → Source Resolver → Reasoning Profile → Model Router → Reasoning Model → Gaia Personality Filter → Response
 ```
 
-This document names the two layers of *judgment* that sit inside that pipeline, and draws the line between them precisely — because that line is easy to blur later. Without a clear split, "which model should answer this" and "is this actually Gaia talking" collapse into the same decision, and the [Character Before Model](./principles.md) principle stops being enforceable in practice.
+This document names the two layers of *judgment* inside that pipeline, and draws the line between them precisely — because that line is easy to blur later. Without a clear split, "which model should answer this" and "is this actually Gaia talking" collapse into the same decision, and the [Character Before Model](./principles.md) principle stops being enforceable in practice.
 
-**A note on scope, since two things are now named "Intent."** [architecture.md §4.2–4.3](./architecture.md#4-system-responsibilities--boundaries) name **Logos's `intentIQ`** and **Gaia** herself as the layer that decides *which capability* (Hermes, Melodiq, SongCompanion, MCP, or none) a turn needs at all — that decision happens at Gaia's level, in her [Cognitive Loop](./architecture.md#cognitive-loop), before any capability is invoked. **IntentIQ**, described below, is a different, later, and more narrowly-scoped judgment despite the similar name: it only runs *after* Gaia has already routed a turn to Hermes specifically, and it decides *how Hermes should reason* about that turn — never whether Hermes should be involved in the first place. Logos's `intentIQ` asks "does this turn need a capability, and which one?"; this document's IntentIQ, running inside Hermes, asks "given that Hermes was chosen, what kind of thinking does it need?" Confusing the two re-creates exactly the problem this document exists to prevent — a single, unnamed judgment quietly doing two jobs.
-
-**Implementation note.** Logos's `intentIQ` — the "does this turn need a capability, and which one" judgment named above — now has a first real implementation at `frontend/src/gaia/logos/intentIQ` (see `docs/evolution.md`). It produces a validated `IntentDecision` (intent, status, confidence, candidates, entities, source of truth, capability, reasoning profile) through a dedicated prompt and the same generic reasoning-provider abstraction the rest of Gaia Desktop uses — not a Hermes-specific call. Logos's `reasonIQ` — "what does this turn mean, and what follows" — also now has a first real implementation at `frontend/src/gaia/logos/reasonIQ`, consuming `intentIQ`'s `IntentDecision` and producing a validated `ReasoningResult` (interpretation, evidence tagged fact/inference/hypothesis, uncertainties, contradictions, missing information, conclusions, hypotheses, a suggested capability, and recommended next steps). Both faculties establish their seam only: their output is currently dev-logged for inspection and does not yet drive capability routing, Foundation selection, or Gaia's response, so nothing about *this* document's IntentIQ/OrchestratorIQ pipeline (still Hermes-internal, still downstream of Logos's faculties) changes.
+**No connection to Logos.** Gaia's own cognition — Logos, with its `intentIQ` and `reasonIQ` faculties (`frontend/src/gaia/logos/`, see architecture.md §4.2) — is what decides, at Gaia's level, whether a turn needs a capability at all, and which one. That decision is made and finished *before* Hermes is ever called. Everything in this document happens only after that decision, entirely inside Hermes, using a name (**IntentIQ**) that resembles Logos's `intentIQ` only by coincidence of language — a naming collision worth flagging, not an architectural relationship. Hermes does not know Logos exists. Logos does not know or care what Hermes does internally. Neither one calls, informs, or depends on the other.
 
 ---
 
@@ -72,7 +72,7 @@ IntentIQ never decides *which provider* answers, and it never decides *whether* 
 
 OrchestratorIQ receives a reasoning profile from IntentIQ and:
 
-1. **Routes.** Selects which provider is best suited to that profile — Hermes, GPT, Venice, DeepSeek, or any future provider — invisibly, per [architecture.md §12](./architecture.md). The provider is chosen for its reasoning strength on that profile, never surfaced, never named to the user (see [principles.md — Invisible Implementation](./principles.md)).
+1. **Routes.** Selects which reasoning provider is best suited to that profile — invisibly, per [architecture.md §12](./architecture.md). The provider is chosen for its reasoning strength on that profile, never surfaced, never named to the user (see [principles.md — Invisible Implementation](./principles.md)). No specific provider or model brand is ever hardcoded here — that is what keeps Hermes model-agnostic.
 2. **Executes.** Calls the chosen provider and receives back raw reasoning — ideas, a draft, a concept.
 3. **Filters.** Passes that raw reasoning through SOUL before anything is returned. This is the enforcement point for [Character Before Model](./principles.md): *a model may generate ideas; Gaia decides whether those ideas become part of her response.*
 
@@ -123,7 +123,9 @@ These two principles are why the layers cannot merge. IntentIQ makes Gaia respon
 
 ## Relationship to Gaia's Structure
 
-IntentIQ and OrchestratorIQ are not additional layers alongside SOUL, Logos, Hindsight, Gaia's capabilities, and Gaia Desktop (see [architecture.md §1](./architecture.md)). They are the internal judgment structure of the **reasoning pipeline that runs inside Hermes-the-capability, once Gaia has already decided, through Logos's `intentIQ`, that Hermes is the capability this turn needs** — the mechanism by which Hermes stays model-agnostic while still being governed by SOUL. IntentIQ and OrchestratorIQ do not own a responsibility SOUL, Logos, or Hermes doesn't already own; they are how Hermes's own responsibility is actually carried out, turn by turn, after Gaia has decided Hermes is the right capability at all.
+IntentIQ and OrchestratorIQ are not additional layers alongside SOUL, Logos, Hindsight, Gaia's capabilities, and Gaia Desktop (see [architecture.md §1](./architecture.md)). They are not layers at all from Gaia's perspective — they are the internal judgment structure of **Hermes's own reasoning pipeline**, private to Hermes, the mechanism by which Hermes stays model-agnostic while still being governed by SOUL once Gaia has called it. They do not own a responsibility SOUL, Logos, or Hermes-the-capability doesn't already own; they are how Hermes carries out its own responsibility, turn by turn, entirely after and independent of whatever led Gaia to call Hermes in the first place.
+
+**Hermes is a tool Gaia can use — nothing more.** She calls it when a turn needs reasoning and ignores it otherwise (architecture.md §5.1). She never depends on its internals, and neither does Logos. If Hermes were replaced by a different reasoning capability tomorrow, this entire document would be replaced with it; nothing about Logos, SOUL, or any other part of Gaia would need to change.
 
 ---
 
