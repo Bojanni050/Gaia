@@ -20,6 +20,7 @@
 const { buildSystemPrompt } = require('./foundation');
 const { recallRelevantContext, renderMemoryContext, reflectOnTurn } = require('./memory');
 const { classify: classifyIntent } = require('./logos/intentIQ');
+const { evaluate: evaluateReasoning } = require('./logos/reasonIQ');
 
 const ALLOWED_ROLES = new Set(['user', 'assistant', 'system']);
 
@@ -118,14 +119,17 @@ function writeSseDelta(res, delta) {
  *   res: import('express').Response,
  *   conversationId?: string,
  *   intentIQ?: (messages: Array, options: object) => object,
+ *   reasonIQ?: (input: object, options: object) => Promise<object>,
  * }} input
  */
-async function performStreamingTurn({ messages, documents, hermes, hindsight, res, conversationId, intentIQ = classifyIntent }) {
+async function performStreamingTurn({ messages, documents, hermes, hindsight, res, conversationId, intentIQ = classifyIntent, reasonIQ = evaluateReasoning }) {
   const problem = validateMessages(messages);
   if (problem) {
     res.status(400).json({ error: problem });
     return;
   }
+
+  const userText = latestUserText(messages);
 
   // Logos: IntentIQ observes the turn and produces an IntentDecision.
   // Dev-logged for inspection only (see logos/intentLog.js) — it does not
@@ -133,14 +137,29 @@ async function performStreamingTurn({ messages, documents, hermes, hindsight, re
   // the same "seam only, no behavior change" posture Logos's earlier
   // client-side intentIQ/reasonIQ were introduced with (evolution.md,
   // Milestone 7b). Never allowed to throw into the turn path.
+  let intentDecision = null;
   try {
-    intentIQ(messages, { contextId: conversationId });
+    intentDecision = intentIQ(messages, { contextId: conversationId });
   } catch (_) {
     // Observability must never take down a real conversational turn.
   }
 
+  // Logos: ReasonIQ consumes that same IntentDecision — the handoff this
+  // seam exists to prove (see logos/index.js's runLogos(), which tests
+  // this composition directly). Fire-and-forget, not awaited: unlike
+  // IntentIQ's free heuristic, ReasonIQ may call a real, paid reasoning
+  // model once one is configured (see the admin surface), and awaiting it
+  // here would add real latency to every turn for a result nothing reads
+  // yet — the opposite of "no behavior change." Its own reasoningDepth
+  // gate (reasonIQ.js) already keeps this cheap when no evidence is
+  // supplied, which is always true here — Gaia doesn't hand ReasonIQ any
+  // evidence yet, so today's calls mostly resolve shallow or degrade
+  // instantly when no reasoning model is configured.
+  Promise.resolve()
+    .then(() => reasonIQ({ text: userText, intentDecision, conversationContext: messages, evidence: [], contextId: conversationId }, {}))
+    .catch(() => {});
+
   const systemPrompt = buildSystemPrompt(documents, messages);
-  const userText = latestUserText(messages);
   const reflections = await recallRelevantContext(hindsight, userText);
   const memoryBlock = renderMemoryContext(reflections);
 

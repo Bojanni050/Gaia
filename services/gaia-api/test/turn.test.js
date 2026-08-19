@@ -258,3 +258,92 @@ test('performStreamingTurn produces an identical assembled prompt with the real 
   });
   assert.equal(seenWithDefault[0].content, 'SOUL\n\n---\n\nPRINCIPLES\n\n---\n\nLEXICON');
 });
+
+// --- Logos.ReasonIQ integration (the IntentIQ -> ReasonIQ handoff seam) ---
+//
+// Fire-and-forget by design (see turn.js's comment) — these tests flush a
+// microtask/macrotask turn (matching how reflectOnTurn's own fire-and-
+// forget write is tested above) rather than awaiting performStreamingTurn
+// itself, since the call is deliberately not on the response's critical
+// path.
+
+async function flush() {
+  await new Promise((resolve) => setImmediate(resolve));
+}
+
+test('performStreamingTurn hands IntentIQ\'s real decision to ReasonIQ, fire-and-forget', async () => {
+  const reasonIQCalls = [];
+  const hermes = { stream: async (messages, { onDelta }) => { onDelta('ok', false); return 'A reply.'; } };
+
+  await performStreamingTurn({
+    messages: [{ role: 'user', content: 'Why is my website crashing?' }],
+    documents: DOCUMENTS,
+    hermes,
+    hindsight: SILENT_HINDSIGHT,
+    res: fakeRes(),
+    intentIQ: () => ({ schemaVersion: 'intentiq.v1', intent: 'inform.explain', status: 'accepted' }),
+    reasonIQ: async (input) => { reasonIQCalls.push(input); return {}; },
+  });
+  await flush();
+
+  assert.equal(reasonIQCalls.length, 1);
+  assert.equal(reasonIQCalls[0].text, 'Why is my website crashing?');
+  assert.equal(reasonIQCalls[0].intentDecision.intent, 'inform.explain');
+  assert.deepEqual(reasonIQCalls[0].evidence, []);
+});
+
+test('performStreamingTurn does not await ReasonIQ — a slow call never delays the response', async () => {
+  let resolveReasonIQ;
+  const slowReasonIQ = () => new Promise((resolve) => { resolveReasonIQ = resolve; });
+  const res = fakeRes();
+  const hermes = { stream: async (messages, { onDelta }) => { onDelta('ok', false); return 'A reply.'; } };
+
+  await performStreamingTurn({
+    messages: [{ role: 'user', content: 'Why is my website crashing?' }],
+    documents: DOCUMENTS,
+    hermes,
+    hindsight: SILENT_HINDSIGHT,
+    res,
+    reasonIQ: slowReasonIQ,
+  });
+
+  // The turn already completed while ReasonIQ is still pending.
+  assert.equal(res.written.at(-1), 'data: [DONE]\n\n');
+  resolveReasonIQ({});
+  await flush();
+});
+
+test('performStreamingTurn completes normally even if ReasonIQ rejects', async () => {
+  const res = fakeRes();
+  const hermes = { stream: async (messages, { onDelta }) => { onDelta('ok', false); return 'A reply.'; } };
+
+  await performStreamingTurn({
+    messages: [{ role: 'user', content: 'Why is my website crashing?' }],
+    documents: DOCUMENTS,
+    hermes,
+    hindsight: SILENT_HINDSIGHT,
+    res,
+    reasonIQ: async () => { throw new Error('boom'); },
+  });
+  await flush(); // the rejection must be swallowed, not surface as an unhandled rejection
+
+  assert.equal(res.headers['Content-Type'], 'text/event-stream');
+  assert.equal(res.written.at(-1), 'data: [DONE]\n\n');
+});
+
+test('performStreamingTurn wires the real ReasonIQ by default and never throws', async () => {
+  const res = fakeRes();
+  const hermes = { stream: async (messages, { onDelta }) => { onDelta('ok', false); return 'A reply.'; } };
+
+  await performStreamingTurn({
+    messages: [{ role: 'user', content: 'Why is my website crashing?' }],
+    documents: DOCUMENTS,
+    hermes,
+    hindsight: SILENT_HINDSIGHT,
+    res,
+    // reasonIQ omitted -> uses the real evaluate(), per the default param.
+  });
+  await flush();
+
+  assert.equal(res.written.at(-1), 'data: [DONE]\n\n');
+});

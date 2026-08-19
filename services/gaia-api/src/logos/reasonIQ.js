@@ -22,13 +22,15 @@
  * phase).
  *
  * Reasoning depth: ReasonIQ decides for itself, per turn, whether the
- * reasoning model needs to be invoked at all (§6). A turn with no
- * supplied evidence and a low-signal, conversational-shaped intent is
- * answered shallowly, in-process, with no model call and an honest,
- * modest result. Everything else is handed to the configured reasoning
- * model. There is no separate "deep reasoning capability" to route to —
- * the configured model *is* the reasoning engine, used at whatever depth
- * the prompt asks for.
+ * reasoning model needs to be invoked at all (§6) — and it only does when
+ * there is genuinely something to weigh. Without supplied evidence there
+ * is nothing for a model call to reason *over*: no intent, however
+ * substantial, turns an empty evidence list into hypotheses or verdicts,
+ * so paying for a call there would only ever reproduce the same honest
+ * "nothing to reason over" result the shallow path already gives for
+ * free. Deep reasoning is therefore triggered by evidence, not by intent
+ * or text length — the model *is* the reasoning engine, used only once
+ * there is something to use it on.
  */
 
 const crypto = require('crypto');
@@ -42,46 +44,20 @@ const { logReasoningResult } = require('./reasonLog');
 
 // --- reasoning depth heuristic --------------------------------------------
 
-const TRIVIAL_LENGTH = 12;
-
-// A handful of short acknowledgement/filler phrases that clear the raw
-// length gate but still carry nothing to reason over — kept deliberately
-// small and local, same posture as intentIQ.js's own filler set (which
-// this intentionally does not import — see that file's comment on why
-// "trivial for recall" and "trivial for presence" are different judgments,
-// and this is a third: "trivial for reasoning").
-const ACKNOWLEDGEMENT_PATTERN = /^(thanks|thank you|thx|ok(ay)?|got it|gotcha|sounds good|cool|makes sense|noted)\b.{0,25}$/i;
-
-function normalize(text) {
-  return String(text || '').trim().toLowerCase();
-}
-
 /**
- * Cheap, legible, replaceable — the same posture as intentIQ.js's and
- * memoryPolicy.js's heuristics (see their own module comments): a real
- * "is deep reasoning warranted" judgment is itself a Logos-level call,
- * but adding a model round-trip just to decide whether to make a model
- * round-trip defeats the point. This gate only decides whether the
- * configured reasoning model is invoked at all.
- * @param {{ text: string, evidence?: Array, intentDecision?: object|null }} input
+ * Deep reasoning is warranted exactly when there is evidence to weigh —
+ * that's the one thing a model call can do that the shallow path can't.
+ * Intent and text length used to also factor in here; they were removed
+ * because, with no evidence supplied, every intent bottoms out at the
+ * same "nothing to reason over" result regardless of how the turn reads,
+ * so branching on intent only bought extra model calls for no extra
+ * signal.
+ * @param {{ text: string, evidence?: Array }} input
  * @returns {'shallow'|'deep'}
  */
 function decideReasoningDepth(input) {
-  const text = normalize(input.text);
   const hasEvidence = Array.isArray(input.evidence) && input.evidence.length > 0;
-  if (hasEvidence) return 'deep';
-  if (!text || text.length < TRIVIAL_LENGTH) return 'shallow';
-  if (ACKNOWLEDGEMENT_PATTERN.test(text)) return 'shallow';
-
-  const intent = input.intentDecision && input.intentDecision.intent;
-  const status = input.intentDecision && input.intentDecision.status;
-
-  // A plain, unresolved conversational turn with nothing to weigh against
-  // doesn't need the reasoning model — there is nothing yet to reason over.
-  if (intent === 'converse' && status === 'accepted') return 'shallow';
-  if (status === 'unknown') return 'shallow';
-
-  return 'deep';
+  return hasEvidence ? 'deep' : 'shallow';
 }
 
 // --- fallback / shallow result construction -------------------------------

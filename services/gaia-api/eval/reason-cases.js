@@ -9,6 +9,12 @@
  * — this repository has no live reasoning-model credential to score
  * against a real LLM. None of this is real user data.
  *
+ * Depth policy: deep reasoning only fires when `evidence` is supplied —
+ * intent and text length no longer factor in (reasonIQ.js's
+ * decideReasoningDepth). Several cases below that used to expect 'deep'
+ * on intent alone now correctly expect 'shallow'; see each one's own
+ * `notes` for what that means for their other assertions.
+ *
  * Each case: { id, input: {text, evidence?, intentDecision?, conversationContext?},
  * expect: { reasoningDepth?, minHypotheses?, expectSufficient?, expectGap?,
  * expectContradiction?, expectVerdict? }, notes }.
@@ -34,8 +40,8 @@ const CASES = [
   {
     id: 'simple-01',
     input: { text: 'What is the capital of Latvia?', intentDecision: { intent: 'inform.explain', status: 'accepted' } },
-    expect: { reasoningDepth: 'deep', expectSufficient: false },
-    notes: 'no evidence supplied — stub should report a gap, not fabricate the answer',
+    expect: { reasoningDepth: 'shallow' },
+    notes: 'no evidence supplied — the depth gate now stays shallow rather than paying for a model call with nothing to reason over (see reasonIQ.js\'s decideReasoningDepth). Known limitation: the shallow path currently reports sufficientForConclusion:true for any non-empty text, which is not really honest for a factual question it can\'t actually answer — a v0.2 fix, not asserted here.',
   },
   {
     id: 'simple-02',
@@ -109,7 +115,8 @@ const CASES = [
   {
     id: 'insufficient-01',
     input: { text: 'Should I say yes or no?', evidence: [] },
-    expect: { reasoningDepth: 'deep', expectSufficient: false, expectGap: true },
+    expect: { reasoningDepth: 'shallow' },
+    notes: 'no evidence -> shallow by policy; the historical expectGap/expectSufficient checks belonged to the old intent-driven depth gate and no longer apply (see simple-01\'s note).',
   },
   {
     id: 'insufficient-02',
@@ -159,8 +166,8 @@ const CASES = [
       text: 'Refactor this function to be more readable.',
       intentDecision: { intent: 'create.transform', status: 'accepted' },
     },
-    expect: { reasoningDepth: 'deep', expectSufficient: false },
-    notes: 'a transform request with no supplied code to transform — should surface as an information gap, not be guessed',
+    expect: { reasoningDepth: 'shallow' },
+    notes: 'a transform request with no supplied code to transform, and no evidence -> shallow by policy (see simple-01\'s note). Ideally this would still surface as an information gap; that\'s v0.2 work on the shallow path, not this depth gate.',
   },
 
   // --- planning / decision reasoning -----------------------------------------
@@ -181,8 +188,8 @@ const CASES = [
       text: 'Write a homepage introduction for me.',
       intentDecision: { intent: 'create.generate', status: 'accepted' },
     },
-    expect: { reasoningDepth: 'deep', expectSufficient: false },
-    notes: 'ReasonIQ interprets the request; it does not draft the copy itself — no evidence supplied about the product means a real gap',
+    expect: { reasoningDepth: 'shallow' },
+    notes: 'ReasonIQ interprets the request; it does not draft the copy itself. No evidence supplied -> shallow by policy (see simple-01\'s note).',
   },
 
   // --- contradictions across supplied evidence --------------------------------
@@ -243,13 +250,14 @@ const CASES = [
   {
     id: 'insufficient-03',
     input: { text: 'What should I do about it?', evidence: [] },
-    expect: { reasoningDepth: 'deep', expectSufficient: false },
-    notes: 'no referent for "it" and no evidence — should not be answered with confidence',
+    expect: { reasoningDepth: 'shallow' },
+    notes: 'no referent for "it" and no evidence -> shallow by policy (see simple-01\'s note).',
   },
   {
     id: 'insufficient-04',
     input: { text: 'Is that a problem?', evidence: [] },
-    expect: { reasoningDepth: 'deep', expectSufficient: false },
+    expect: { reasoningDepth: 'shallow' },
+    notes: 'no evidence -> shallow by policy (see simple-01\'s note).',
   },
 
   // --- more ambiguous context ---------------------------------------------

@@ -193,14 +193,22 @@ test('reasonIQ: supplied evidence always triggers deep reasoning, even for short
   assert.equal(result.reasoningDepth, 'deep');
 });
 
-test('reasonIQ: a substantial, non-conversational turn goes deep', async () => {
+test('reasonIQ: a substantial, non-conversational turn WITHOUT evidence still stays shallow — intent alone no longer triggers a model call', async () => {
   let called = false;
   const model = { chat: async () => { called = true; return JSON.stringify({ interpretation: 'ok' }); }, isConfigured: () => true };
-  await reasonIQ.evaluate(
+  const result = await reasonIQ.evaluate(
     { text: 'Why does the API return a 500 on the checkout endpoint sometimes?', intentDecision: { intent: 'inform.explain', status: 'accepted' } },
     { reasoningModel: model, ...silent }
   );
-  assert.equal(called, true);
+  assert.equal(called, false);
+  assert.equal(result.reasoningDepth, 'shallow');
+});
+
+test('reasonIQ: decideReasoningDepth depends only on evidence, not intent or text length', () => {
+  assert.equal(reasonIQ.decideReasoningDepth({ text: 'short' }), 'shallow');
+  assert.equal(reasonIQ.decideReasoningDepth({ text: 'a long, substantial, detailed question about something important' }), 'shallow');
+  assert.equal(reasonIQ.decideReasoningDepth({ text: 'x', evidence: [{ content: 'anything' }] }), 'deep');
+  assert.equal(reasonIQ.decideReasoningDepth({ text: '', evidence: [] }), 'shallow');
 });
 
 // --- reasonIQ.evaluate — happy path structure -----------------------------

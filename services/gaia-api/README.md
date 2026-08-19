@@ -88,10 +88,20 @@ rather than guessing or throwing into the turn.
 
 **Out of scope this phase** (see the ReasonIQ v0.1 implementation
 report): Hermes, Hindsight, MCP, tool execution, capability routing, and
-persistence of any kind. `src/logos/index.js`'s `runLogos()` composes
-IntentIQ → ReasonIQ for testing that handoff, but is **not** wired into
-`turn.js` — there's no Gaia-side decision yet to hand a `ReasoningResult`
-to.
+persistence of any kind.
+
+**Wired into `turn.js` as an observe-only seam, same posture as
+IntentIQ** — every streaming turn hands IntentIQ's real `IntentDecision`
+to ReasonIQ (the same composition `src/logos/index.js`'s `runLogos()`
+tests directly), but the result is dev-logged only and never changes
+document selection, recall, or the Hermes call. Unlike IntentIQ's free
+heuristic, this call is **fire-and-forget, not awaited** — ReasonIQ may
+invoke a real, paid reasoning model once one is configured via `/admin`,
+and awaiting it would add real latency to every turn for a result
+nothing reads yet. Gaia doesn't supply ReasonIQ any `evidence` yet
+either, so most calls today resolve shallow or degrade instantly. There
+is still no Gaia-side decision that consumes a `ReasoningResult` — that
+remains a later phase.
 
 Run the synthetic evaluation set: `npm run eval:reason` (see
 `eval/README.md` — it runs against a labeled non-LLM stub, not a real
