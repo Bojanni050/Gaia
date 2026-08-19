@@ -12,18 +12,27 @@ const { shouldRecall, shouldReflect } = require('./memoryPolicy');
 const MAX_MEMORY_LINES = 6;
 const UNCERTAIN_CONFIDENCE_THRESHOLD = 0.55;
 
-function normalizeSummary(summary) {
-  return (summary || '').replace(/\s+/g, ' ').trim();
+function normalizeSummary(text) {
+  return (text || '').replace(/\s+/g, ' ').trim();
 }
 
+/**
+ * Reads Hindsight's own field names directly (`text`, `scores.final`) —
+ * hindsightClient.js no longer renames these to `summary`/`confidence` on
+ * the way in, so this is the one place that derives a renderable line
+ * from them. `type`/`entities`/`tags`/`occurred*` ride along on each
+ * reflection for future use (e.g. filtering by type) without needing
+ * another round-trip through hindsightClient.js to add them.
+ */
 function formatReflectionLine(reflection) {
-  const summary = normalizeSummary(reflection?.summary);
+  const summary = normalizeSummary(reflection?.text);
   if (!summary) return null;
-  const isUncertain = typeof reflection.confidence === 'number' && reflection.confidence < UNCERTAIN_CONFIDENCE_THRESHOLD;
+  const confidence = reflection?.scores?.final;
+  const isUncertain = typeof confidence === 'number' && confidence < UNCERTAIN_CONFIDENCE_THRESHOLD;
   return isUncertain ? `- ${summary} (uncertain)` : `- ${summary}`;
 }
 
-/** @param {Array<{summary: string, confidence: number|null}>} reflections */
+/** @param {Array<{text: string, scores: {final: number|null}}>} reflections */
 function condenseMemoryContext(reflections) {
   if (!reflections || reflections.length === 0) return [];
   const seen = new Set();
@@ -38,7 +47,7 @@ function condenseMemoryContext(reflections) {
   return lines;
 }
 
-/** @param {Array<{summary: string, confidence: number|null}>} reflections */
+/** @param {Array<{text: string, scores: {final: number|null}}>} reflections */
 function renderMemoryContext(reflections) {
   const lines = condenseMemoryContext(reflections);
   if (lines.length === 0) return null;

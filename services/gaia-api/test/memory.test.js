@@ -39,7 +39,7 @@ test('shouldReflect keeps an exchange unless both sides are trivial', () => {
 
 // --- hindsightClient -------------------------------------------------------
 
-test('hindsightClient.recall posts the query and maps results', async () => {
+test('hindsightClient.recall posts the query, defaults to budget "mid", and maps the full result shape', async () => {
   let captured;
   const client = createHindsightClient({
     baseUrl: 'http://hindsight.internal:8888',
@@ -48,15 +48,78 @@ test('hindsightClient.recall posts the query and maps results', async () => {
       captured = { url, init };
       return {
         ok: true,
-        json: async () => ({ results: [{ text: 'Bo prefers async updates', scores: { final: 0.8 } }] }),
+        json: async () => ({
+          results: [{
+            id: 'mem-1',
+            text: 'Bo prefers async updates',
+            type: 'observation',
+            context: 'work preferences',
+            entities: ['Bo'],
+            tags: ['context'],
+            occurred_start: '2026-08-01T00:00:00Z',
+            occurred_end: null,
+            scores: { final: 0.8, reranker: 0.75, semantic: 0.9, keyword: null },
+          }],
+        }),
       };
     },
   });
 
   const results = await client.recall('what does Bo prefer');
   assert.equal(captured.url, 'http://hindsight.internal:8888/v1/default/banks/gaia/memories/recall');
-  assert.equal(JSON.parse(captured.init.body).query, 'what does Bo prefer');
-  assert.deepEqual(results, [{ summary: 'Bo prefers async updates', confidence: 0.8 }]);
+  const body = JSON.parse(captured.init.body);
+  assert.equal(body.query, 'what does Bo prefer');
+  assert.equal(body.budget, 'mid');
+  assert.deepEqual(results, [{
+    id: 'mem-1',
+    text: 'Bo prefers async updates',
+    type: 'observation',
+    context: 'work preferences',
+    entities: ['Bo'],
+    tags: ['context'],
+    occurredStart: '2026-08-01T00:00:00Z',
+    occurredEnd: null,
+    scores: { final: 0.8, reranker: 0.75, semantic: 0.9, keyword: null },
+  }]);
+});
+
+test('hindsightClient.recall lets a caller override the default budget per call', async () => {
+  let captured;
+  const client = createHindsightClient({
+    baseUrl: 'http://hindsight.internal:8888',
+    bankId: 'gaia',
+    fetchImpl: async (url, init) => { captured = init; return { ok: true, json: async () => ({ results: [] }) }; },
+  });
+
+  await client.recall('quick check', { budget: 'low' });
+  assert.equal(JSON.parse(captured.body).budget, 'low');
+});
+
+test('hindsightClient: the factory-level default budget can be changed too', async () => {
+  let captured;
+  const client = createHindsightClient({
+    baseUrl: 'http://hindsight.internal:8888',
+    bankId: 'gaia',
+    budget: 'high',
+    fetchImpl: async (url, init) => { captured = init; return { ok: true, json: async () => ({ results: [] }) }; },
+  });
+
+  await client.recall('deep question');
+  assert.equal(JSON.parse(captured.body).budget, 'high');
+});
+
+test('hindsightClient.recall tolerates a sparse result (missing optional fields)', async () => {
+  const client = createHindsightClient({
+    baseUrl: 'http://hindsight.internal:8888',
+    bankId: 'gaia',
+    fetchImpl: async () => ({ ok: true, json: async () => ({ results: [{ id: 'x', text: 'bare fact' }] }) }),
+  });
+
+  const [result] = await client.recall('anything');
+  assert.equal(result.text, 'bare fact');
+  assert.equal(result.type, null);
+  assert.deepEqual(result.tags, []);
+  assert.equal(result.scores.final, null);
 });
 
 test('hindsightClient.reflect posts an async retain', async () => {
@@ -83,12 +146,16 @@ test('hindsightClient refuses to construct without a base URL or bank', () => {
 
 // --- memory.js orchestration ------------------------------------------------
 
+function reflection(text, final) {
+  return { text, scores: { final } };
+}
+
 test('condenseMemoryContext tags low-confidence lines uncertain, caps at 6, dedupes', () => {
   const reflections = [
-    { summary: 'A', confidence: 0.9 },
-    { summary: 'B', confidence: 0.4 },
-    { summary: 'A', confidence: 0.9 }, // duplicate
-    ...Array.from({ length: 6 }, (_, i) => ({ summary: `extra-${i}`, confidence: 0.9 })),
+    reflection('A', 0.9),
+    reflection('B', 0.4),
+    reflection('A', 0.9), // duplicate
+    ...Array.from({ length: 6 }, (_, i) => reflection(`extra-${i}`, 0.9)),
   ];
   const lines = condenseMemoryContext(reflections);
   assert.equal(lines.length, 6);
@@ -102,7 +169,7 @@ test('renderMemoryContext returns null when there is nothing to show', () => {
 });
 
 test('renderMemoryContext renders a block when there is something to show', () => {
-  const block = renderMemoryContext([{ summary: 'Bo prefers async updates', confidence: 0.9 }]);
+  const block = renderMemoryContext([reflection('Bo prefers async updates', 0.9)]);
   assert.match(block, /long-term memory \(Hindsight\)/);
   assert.match(block, /- Bo prefers async updates$/m);
 });

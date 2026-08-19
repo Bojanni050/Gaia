@@ -11,7 +11,7 @@
  * currently has no auth of its own (Tailscale membership is the only
  * access control, same posture as services/cognition).
  */
-function createHindsightClient({ baseUrl, bankId, fetchImpl = fetch, timeoutMs = 4000 }) {
+function createHindsightClient({ baseUrl, bankId, budget = 'mid', fetchImpl = fetch, timeoutMs = 4000 }) {
   const root = String(baseUrl || '').replace(/\/+$/, '');
   if (!root) {
     throw new Error('HINDSIGHT_URL is required');
@@ -24,16 +24,35 @@ function createHindsightClient({ baseUrl, bankId, fetchImpl = fetch, timeoutMs =
   const bankUrl = (path = '') => `${root}/v1/default/banks/${bankId}${path}`;
 
   /**
+   * `budget` defaults to Hindsight's own default (`'mid'`, 300 candidates)
+   * rather than an artificially narrowed one — it scales every retrieval
+   * strategy Hindsight runs (semantic over-fetch, BM25 limit, graph-
+   * traversal depth, reranking pool), so a caller that always asked for
+   * `'low'` was quietly capping recall quality on every turn. Overridable
+   * per call for anything that genuinely only needs a fast/shallow lookup.
+   *
+   * The full per-result shape is passed through rather than flattened to
+   * just text+confidence — `type`, `entities`, `tags`, and the occurred_*
+   * window are exactly what distinguishes a graph- or temporal-matched
+   * result from a plain semantic one; flattening them here would throw
+   * that signal away before any caller got a chance to use it.
+   *
    * @param {string} query
-   * @returns {Promise<Array<{ summary: string, confidence: number|null }>>}
+   * @param {{ budget?: 'low'|'mid'|'high' }} [options]
+   * @returns {Promise<Array<{
+   *   id: string, text: string, type: string|null, context: string|null,
+   *   entities: string[]|null, tags: string[], occurredStart: string|null,
+   *   occurredEnd: string|null,
+   *   scores: { final: number|null, reranker: number|null, semantic: number|null, keyword: number|null },
+   * }>>}
    */
-  async function recall(query) {
+  async function recall(query, options = {}) {
     let response;
     try {
       response = await fetchImpl(bankUrl('/memories/recall'), {
         method: 'POST',
         headers,
-        body: JSON.stringify({ query, budget: 'low' }),
+        body: JSON.stringify({ query, budget: options.budget || budget }),
         signal: AbortSignal.timeout(timeoutMs),
       });
     } catch (error) {
@@ -44,8 +63,20 @@ function createHindsightClient({ baseUrl, bankId, fetchImpl = fetch, timeoutMs =
     }
     const data = await response.json();
     return (data.results || []).map((r) => ({
-      summary: r.text,
-      confidence: typeof r.scores?.final === 'number' ? r.scores.final : null,
+      id: r.id,
+      text: r.text,
+      type: r.type || null,
+      context: r.context || null,
+      entities: r.entities || null,
+      tags: r.tags || [],
+      occurredStart: r.occurred_start || null,
+      occurredEnd: r.occurred_end || null,
+      scores: {
+        final: typeof r.scores?.final === 'number' ? r.scores.final : null,
+        reranker: typeof r.scores?.reranker === 'number' ? r.scores.reranker : null,
+        semantic: typeof r.scores?.semantic === 'number' ? r.scores.semantic : null,
+        keyword: typeof r.scores?.keyword === 'number' ? r.scores.keyword : null,
+      },
     }));
   }
 

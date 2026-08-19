@@ -185,7 +185,7 @@ test('performStreamingTurn recalls only when the policy fires, and reflects only
   const recallCalls = [];
   const reflectCalls = [];
   const hindsight = {
-    recall: async (query) => { recallCalls.push(query); return [{ summary: 'Bo prefers async updates', confidence: 0.9 }]; },
+    recall: async (query) => { recallCalls.push(query); return [{ text: 'Bo prefers async updates', scores: { final: 0.9 } }]; },
     reflect: async (item) => { reflectCalls.push(item); },
   };
   const hermes = { stream: async (messages, { onDelta }) => { onDelta('ok', false); return 'A real reply here.'; } };
