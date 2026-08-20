@@ -9,6 +9,15 @@
  * orchestration (Hermes). The reply returned is plain text — no model
  * names, no provider details, no chain-of-thought ever cross this seam.
  *
+ * This file is Gaia's decision/orchestration layer for a turn: it decides
+ * what context Hermes sees (SOUL, recalled memory, mental models) and
+ * calls the one capability a turn uses today. It does not itself write to
+ * the HTTP response or shape a wire frame — Hermes's result (or failure)
+ * is always handed to responseEngine.js, which is the only place that
+ * decides what actually reaches the client. See responseEngine.js's own
+ * header comment for why that seam exists and what it deliberately does
+ * not do.
+ *
  * performTurn (below) is Desktop's exact, unchanged contract — non-
  * streaming, always the full SOUL, no memory. performStreamingTurn is
  * additive, built for docs/web-migration-plan.md's Phase B (a faithful
@@ -39,6 +48,7 @@ const { buildSystemPrompt } = require('./foundation');
 const { recallRelevantContext, renderMemoryContext, reflectOnTurn, fetchMentalModelContext, renderMentalModelContext } = require('./memory');
 const { classify: classifyIntent } = require('./logos/intentIQ');
 const { evaluate: evaluateReasoning } = require('./logos/reasonIQ');
+const { formatReply, createStreamEmitter } = require('./responseEngine');
 
 const ALLOWED_ROLES = new Set(['user', 'assistant', 'system']);
 
@@ -120,19 +130,17 @@ async function performTurn({ messages, systemPrompt, hermes, attachments }) {
   const attachmentBlock = renderAttachmentContext(attachments);
   const fullSystemPrompt = attachmentBlock ? `${systemPrompt}\n\n---\n\n${attachmentBlock}` : systemPrompt;
 
-  let reply;
+  // Hermes is a capability: it returns a result, it does not speak to the
+  // client. Whatever it returns (or throws) is handed to the Response
+  // Engine, which is the only thing that decides what becomes the reply
+  // and how a failure is phrased — see responseEngine.js.
+  let reply = null;
   try {
     reply = await hermes.chat(assembleMessages(fullSystemPrompt, messages));
   } catch (_) {
-    // Calm and generic on purpose: transport details, provider names and
-    // status codes never reach the client.
-    return { status: 502, body: { error: 'gaia could not answer right now' } };
+    reply = null;
   }
-
-  if (typeof reply !== 'string' || reply.length === 0) {
-    return { status: 502, body: { error: 'gaia could not answer right now' } };
-  }
-  return { status: 200, body: { reply } };
+  return formatReply(reply);
 }
 
 function latestUserText(messages) {
@@ -140,15 +148,6 @@ function latestUserText(messages) {
     if (messages[i].role === 'user') return messages[i].content || '';
   }
   return '';
-}
-
-/**
- * Writes one OpenAI-compatible SSE delta frame — the exact shape
- * gaia-web's HermesProvider._readSse already parses, so a future client
- * cutover changes only the URL it streams from, not the parser.
- */
-function writeSseDelta(res, delta) {
-  res.write(`data: ${JSON.stringify({ choices: [{ delta }] })}\n\n`);
 }
 
 /**
@@ -242,37 +241,27 @@ async function performStreamingTurn({ messages, documents, hermes, hindsight, re
   if (memoryBlock) systemMessages.push({ role: 'system', content: memoryBlock });
   const assembled = [...systemMessages, ...messages.map(({ role, content }) => ({ role, content }))];
 
-  let headersSent = false;
-
+  // Hermes streams internal reasoning/content deltas; it never touches
+  // `res`. Every delta is handed to the Response Engine's stream emitter,
+  // which is the only thing that owns the wire frame shape, the lazy
+  // header-send, and the completion/failure lifecycle (responseEngine.js).
+  // This is what makes a future capability's stream converge on the exact
+  // same user-facing shape Hermes's does today, with no capability-specific
+  // branching here.
+  const emitter = createStreamEmitter(res);
   const onDelta = (chunk, isReasoning) => {
-    if (!headersSent) {
-      res.writeHead(200, {
-        'Content-Type': 'text/event-stream',
-        'Cache-Control': 'no-cache',
-        Connection: 'keep-alive',
-      });
-      headersSent = true;
-    }
-    writeSseDelta(res, isReasoning ? { reasoning_content: chunk } : { content: chunk });
+    emitter.delta(chunk, { reasoning: isReasoning });
   };
 
   let fullText;
   try {
     fullText = await hermes.stream(assembled, { onDelta });
   } catch (_) {
-    // Calm and generic, same discipline as performTurn — but by this
-    // point headers may already be on the wire, so "calm" means "end the
-    // stream" rather than "return a clean error body" once that's true.
-    if (!headersSent) {
-      res.status(502).json({ error: 'gaia could not answer right now' });
-    } else {
-      res.end();
-    }
+    emitter.fail();
     return;
   }
 
-  res.write('data: [DONE]\n\n');
-  res.end();
+  emitter.finish();
 
   reflectOnTurn(hindsight, { conversationId, userText, assistantText: fullText });
 

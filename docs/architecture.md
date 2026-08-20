@@ -1,9 +1,9 @@
 ---
 title: Gaia — Architecture
 document: architecture
-version: 2.3.1
+version: 2.4.0
 status: foundation
-last_updated: 2026-08-19
+last_updated: 2026-08-20
 owner: Gaia Product Foundation
 framing: "Gaia is a lifelong personal intelligence designed to grow through understanding."
 ---
@@ -130,7 +130,11 @@ CAPABILITY (optional)
 ↓
 RESULT
 ↓
-GAIA
+GAIA (integrates the result)
+↓
+RESPONSE ENGINE (expresses it — see §4.10)
+↓
+USER
 ↓
 LOGOS
 ├── Evaluate
@@ -143,6 +147,8 @@ FEEDBACK (first-class input)
 ```
 
 Logos is not Gaia herself. Logos thinks *for* Gaia, but Gaia ultimately decides what to do with those insights.
+
+A capability-free turn takes the same path from a shorter start: Gaia decides no capability is required, and goes straight from Decision to the Response Engine. Whether or not a capability was used is invisible past that point — both paths converge on the same expression boundary before anything reaches the user (see §4.10).
 
 ---
 
@@ -361,6 +367,19 @@ Gaia Desktop **does not**: perform reasoning, decide what to remember, hold the 
 
 - See §3. A client of Gaia Cloud, reached over the Gaia API. Owns experience and mediation; owns no canonical reasoning, memory, identity, or orchestration logic — none of that runs on the device. It defers every decision to Gaia, in the cloud.
 
+### 4.10 Response Engine — Expression Boundary
+
+> **Capabilities never speak to the user. Gaia does.** Every user-visible response passes through Gaia's Response Engine, regardless of which capability — if any — produced the underlying result.
+
+- **Owns:** The final expression boundary between a capability result (or a direct Gaia decision requiring no capability at all) and the client. This is the seam the Cognitive Loop and §5.1 name as GAIA INTEGRATION → RESPONSE ENGINE.
+- **Provides:** One convergence point for a native response and a capability-produced response — the client cannot tell, and must never be able to tell, which path a given turn took. It maps capability failure into Gaia's own calm language (never a provider name, model name, HTTP status, or stack trace), and it owns the wire lifecycle of a streamed response (open, delta, complete, fail) so that lifecycle exists in exactly one place, not once per capability.
+- **Never:** Reasons, forms hypotheses, judges evidence, or decides which capability to use — those are Logos's and Gaia's jobs (§4.2, §4.3). Never becomes a second reasoning engine. Never contains capability-specific branching that a future capability (Melodiq, SongCompanion, MCP) would need its own special case to pass through — the boundary is capability-agnostic by construction.
+- **Boundary rule:** No capability may write to the client directly. A capability returns a result (or streams plain content/error deltas) to Gaia's orchestration; Gaia hands that to the Response Engine; the Response Engine is the only thing that produces what the client actually receives. This is what makes "Hermes speaking directly to the user" a defect rather than an implementation detail — see the worked example below.
+- **Implementation today:** `services/gaia-api/src/responseEngine.js`. `services/gaia-api/src/turn.js` (Gaia's orchestration for a conversational turn) calls Hermes, then hands the result — success, empty, or thrown — to `formatReply` (non-streaming) or streams through `createStreamEmitter` (streaming), never touching the HTTP response itself. The wire contract this seam currently produces (`{ reply }` JSON; SSE frames shaped `{ choices: [{ delta }] }`) is unchanged from before this seam existed — the correction is architectural (one named, capability-agnostic module in the right place) rather than a wire-format change, which would be a separate, larger, cross-repo decision (Gaia Desktop is a different repository — see docs/split-plan.md).
+- **What this does not yet cover:** Today exactly one capability (Hermes) participates in a turn, with Hindsight consulted directly by Gaia's orchestration for recall/reflection — there is no second capability, no capability router, and no multi-step "call a capability, integrate, decide whether another call is needed" loop anywhere in this codebase, because nothing yet drives that decision (intentIQ/reasonIQ explicitly do not select or invoke capabilities — see §4.2 and `logos/reasonIQ.js`'s own header comment). Building a general multi-capability execution loop now, with only one real caller, would be exactly the speculative infrastructure §9 and coding-standards.md §9 ("no speculative generality... add abstraction when a second real caller exists, not before") prohibit. The Response Engine's contract (`delta`/`finish`/`fail`, `formatReply`) is deliberately capability-agnostic so that a second capability can be wired through it unchanged, but the routing/multi-step decision layer above it is intentionally not built until a second capability makes it a real requirement, not a hypothetical one.
+
+**Worked example — the violation this corrects.** Before this correction, `performStreamingTurn` in `turn.js` wrote SSE frames onto the HTTP response from inside the callback Hermes invokes per token, and separately duplicated the same calm-error text in `performTurn`'s catch block. Functionally, Hermes's output *was* the response, formatted ad hoc, in two different places, with no named boundary between "what a capability returned" and "what the user receives." That is `Gaia → Hermes → streamed text → User` — the exact pattern this document's earlier draft (see evolution.md) flagged as wrong. The fix moved that formatting/emission logic into `responseEngine.js`, called uniformly from both of `turn.js`'s paths, with no change to the bytes a client already receives.
+
 ---
 
 ## 5. Data & Interaction Flow
@@ -391,7 +410,11 @@ c. If an external action is required mid-task:
 - Capability signals intent → Desktop surfaces permission → user consents
 - MCP executes the action → result returns to capability
 d. Capability streams result back to Gaia.
-7. Gaia integrates the capability's result (if any) and formulates her response.
+7. Gaia integrates the capability's result (if any). Whether a capability was used or
+Gaia is responding natively, the result now passes through Gaia's Response Engine
+(§4.10) — the single boundary that formulates the final response, maps any failure
+into Gaia's own calm language, and owns the streamed wire lifecycle. No capability
+writes to the client directly.
 8. Desktop renders the response as Gaia's continuous voice, regardless of which
 capability (if any) was involved (see principles.md — Invisible Implementation).
 9. Asynchronously, significant patterns are reflected into Hindsight via memory policies
@@ -529,9 +552,13 @@ DECIDE   Gaia decides on goals and plans.
 ROUTE    Gaia decides whether a capability is needed. If not, Gaia responds directly.
 CONTEXT  (capability path) Capability retrieves relevant context (e.g. Hindsight).
 EXECUTE  (capability path) Capability executes via an internal provider; begins emitting tokens.
-STREAM   (capability path) Tokens stream to Desktop; Gaia's presence indicates listening/thinking/speaking.
-ACT?     If an action is needed → intent surfaced → permission → MCP → result folded in.
-COMPLETE Response is finalized; Desktop renders the turn.
+EXPRESS  Every delta — and, on the native path, the direct response — passes through Gaia's
+         Response Engine (§4.10) before reaching Desktop. This is the one place the wire
+         frame is produced; a capability never writes to Desktop's connection itself.
+STREAM   Gaia's Response Engine streams to Desktop; Gaia's presence indicates listening/thinking/speaking.
+ACT?     If an action is needed → intent surfaced → permission → MCP → result folded in,
+         then re-enters EXPRESS the same way any other capability result does.
+COMPLETE Response is finalized by the Response Engine; Desktop renders the turn.
 REFLECT  Asynchronously, memory policies may reflect significant patterns into Hindsight.
 FEEDBACK Feedback flows into Logos as a first-class input for the next turn.
 CLOSE    Connection closes; session continuity is preserved for the next turn.
@@ -589,6 +616,7 @@ To prevent silent boundary collapse over time:
 - **No client hosts Gaia.** Identity, cognition, memory, and orchestration run in Gaia Cloud only. A client (Gaia Desktop or any future one) that gains a local copy of any of these — even as a cache or a fallback — is a boundary violation, not an optimization.
 - **A hypothesis is never presented as a fact.** Confidence and status travel with hypothesis content everywhere it goes — into Logos, into responses, into the memory view. Silently rounding an unconfirmed hypothesis up to stated certainty is a violation of both this rule and SOUL's "never pretends certainty."
 - **Hindsight persists; Logos reasons (§6.2).** Forming a hypothesis, judging evidence relevance, testing, confirming, rejecting, refining, or revising confidence is Logos's job — never Hindsight's own service, and never a Hindsight-adjacent storage sidecar built to hold this content. A storage layer that starts making these judgments has become an unnamed second reasoning engine.
+- **Capabilities never speak to the user; every response passes through the Response Engine (§4.10).** No capability writes to the client connection, formats the final reply, or decides how its own failure is phrased to the user — that is the Response Engine's job, and its only job. A capability that streams its result straight onto the HTTP response, or an orchestration path that special-cases how one capability's output reaches the client versus another's, is the same boundary collapse this section exists to prevent, applied to expression instead of memory.
 
 These rules are the architectural expression of Gaia's promise: she can grow through understanding indefinitely because the systems that make her *her* never dissolve into one another.
 
@@ -627,5 +655,6 @@ This architecture.md is now the foundation. The following documents should be re
 5. **capability documentation** (Melodiq, SongCompanion, etc.) — ensure each is framed as an optional, cloud-hosted instrument.
 6. **Local observation/capture capability** (deferred, see "Deployment Topology" above) — design separately when it is prioritized; do not retrofit it into this version's diagrams.
 7. **services/cognition** (the hypothesis/pattern storage sidecar) — already built storage-only, matching §6.2; no code change implied by this revision, only that this document now says explicitly what that service's own README already said implicitly.
+8. **services/gaia-api/src/responseEngine.js** (§4.10) — already built, matching this revision: the expression boundary between a capability result and the client, extracted out of `turn.js`'s orchestration code. No wire-format change; see evolution.md for the specific violation this corrected and what was deliberately left unbuilt (a multi-capability execution loop, with no second capability yet to justify one).
 
 Each document should be held against this new architecture.md as the single source of truth.
