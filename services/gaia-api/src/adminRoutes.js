@@ -21,6 +21,9 @@
  *       image OCR (ocrResolver.js) — same OpenRouter account as `model`,
  *       falls back to `model` when unset.
  *   GET  /admin/api/reasoniq/models   -> fetches the model list from OpenRouter using the stored key
+ *   GET  /admin/api/logos/decisions  -> { decisions: [...] } — durable IntentIQ/ReasonIQ decision log
+ *       (decisionStore.js), newest first. Query params: `limit` (default 50),
+ *       `kind` ('intentiq.decision' | 'reasoniq.result', omit for both).
  */
 const express = require('express');
 const path = require('path');
@@ -29,11 +32,12 @@ const { createOpenRouterClient } = require('./logos/openRouterClient');
 /**
  * @param {{
  *   store: ReturnType<import('./logos/reasoningModelStore').createReasoningModelStore>,
+ *   decisionStore?: ReturnType<import('./logos/decisionStore').createDecisionStore>,
  *   auth: import('express').RequestHandler,
  *   createOpenRouterClientFn?: typeof createOpenRouterClient,
  * }} deps
  */
-function createAdminRouter({ store, auth, createOpenRouterClientFn = createOpenRouterClient }) {
+function createAdminRouter({ store, decisionStore, auth, createOpenRouterClientFn = createOpenRouterClient }) {
   const router = express.Router();
 
   router.get('/', (req, res) => {
@@ -77,6 +81,15 @@ function createAdminRouter({ store, auth, createOpenRouterClientFn = createOpenR
       // openRouterClient.js itself.
       res.status(502).json({ error: 'could not fetch models from openrouter right now' });
     }
+  });
+
+  router.get('/api/logos/decisions', auth, (req, res) => {
+    if (!decisionStore) {
+      return res.json({ decisions: [] });
+    }
+    const limit = Number(req.query.limit);
+    const kind = typeof req.query.kind === 'string' ? req.query.kind : undefined;
+    res.json({ decisions: decisionStore.list({ limit: Number.isFinite(limit) ? limit : undefined, kind }) });
   });
 
   return router;

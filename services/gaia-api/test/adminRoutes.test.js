@@ -8,11 +8,14 @@ const os = require('os');
 const path = require('path');
 const { createAdminRouter } = require('../src/adminRoutes');
 const { createReasoningModelStore } = require('../src/logos/reasoningModelStore');
+const { createDecisionStore } = require('../src/logos/decisionStore');
 const { parseTokens, createAuthMiddleware } = require('../src/auth');
 
-function startTestServer() {
+function startTestServer({ withDecisionStore = true } = {}) {
   const storePath = path.join(fs.mkdtempSync(path.join(os.tmpdir(), 'admin-routes-')), 'config.json');
   const store = createReasoningModelStore({ storePath });
+  const decisionsDir = fs.mkdtempSync(path.join(os.tmpdir(), 'admin-routes-decisions-'));
+  const decisionStore = withDecisionStore ? createDecisionStore({ decisionsDir }) : undefined;
   const auth = createAuthMiddleware(parseTokens('test-token'));
 
   let fakeOpenRouterModels = null;
@@ -26,7 +29,7 @@ function startTestServer() {
 
   const app = express();
   app.use(express.json());
-  app.use('/admin', createAdminRouter({ store, auth, createOpenRouterClientFn }));
+  app.use('/admin', createAdminRouter({ store, decisionStore, auth, createOpenRouterClientFn }));
 
   const server = app.listen(0);
   const port = server.address().port;
@@ -35,6 +38,7 @@ function startTestServer() {
   return {
     baseUrl,
     store,
+    decisionStore,
     setModels: (models) => { fakeOpenRouterModels = models; },
     setError: (err) => { fakeOpenRouterError = err; },
     close: () => new Promise((resolve) => server.close(resolve)),
@@ -196,6 +200,64 @@ test('GET /admin/api/reasoniq/models maps an OpenRouter failure to a calm 502', 
     assert.equal(res.status, 502);
     const body = await res.json();
     assert.ok(!JSON.stringify(body).includes('sk-or-x'));
+  } finally {
+    await ctx.close();
+  }
+});
+
+// --- GET /admin/api/logos/decisions -----------------------------------
+
+test('GET /admin/api/logos/decisions requires auth', async () => {
+  const ctx = startTestServer();
+  try {
+    const res = await fetch(`${ctx.baseUrl}/admin/api/logos/decisions`);
+    assert.equal(res.status, 401);
+  } finally {
+    await ctx.close();
+  }
+});
+
+test('GET /admin/api/logos/decisions returns the durable log, newest first', async () => {
+  const ctx = startTestServer();
+  try {
+    ctx.decisionStore.append({ kind: 'intentiq.decision', intent: 'first' });
+    ctx.decisionStore.append({ kind: 'reasoniq.result', reasoningDepth: 'shallow' });
+
+    const res = await fetch(`${ctx.baseUrl}/admin/api/logos/decisions`, { headers: authHeaders() });
+    assert.equal(res.status, 200);
+    const body = await res.json();
+    assert.equal(body.decisions.length, 2);
+    assert.equal(body.decisions[0].kind, 'reasoniq.result');
+  } finally {
+    await ctx.close();
+  }
+});
+
+test('GET /admin/api/logos/decisions supports limit and kind filters', async () => {
+  const ctx = startTestServer();
+  try {
+    ctx.decisionStore.append({ kind: 'intentiq.decision', intent: 'a' });
+    ctx.decisionStore.append({ kind: 'reasoniq.result', reasoningDepth: 'shallow' });
+    ctx.decisionStore.append({ kind: 'intentiq.decision', intent: 'b' });
+
+    const res = await fetch(`${ctx.baseUrl}/admin/api/logos/decisions?kind=intentiq.decision&limit=1`, {
+      headers: authHeaders(),
+    });
+    const body = await res.json();
+    assert.equal(body.decisions.length, 1);
+    assert.equal(body.decisions[0].intent, 'b');
+  } finally {
+    await ctx.close();
+  }
+});
+
+test('GET /admin/api/logos/decisions returns an empty list rather than erroring when no decisionStore is configured', async () => {
+  const ctx = startTestServer({ withDecisionStore: false });
+  try {
+    const res = await fetch(`${ctx.baseUrl}/admin/api/logos/decisions`, { headers: authHeaders() });
+    assert.equal(res.status, 200);
+    const body = await res.json();
+    assert.deepEqual(body.decisions, []);
   } finally {
     await ctx.close();
   }

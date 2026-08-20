@@ -40,6 +40,20 @@
   .status.err { color: #d98a8a; }
   .hint { font-size: 0.76rem; color: #6b6459; margin-top: 0.4rem; }
   .model-meta { font-size: 0.76rem; color: #9b9484; margin-top: 0.3rem; }
+  .field-row { display: flex; gap: 0.6rem; align-items: flex-end; flex-wrap: wrap; }
+  .field-row > div { flex: 1; min-width: 130px; }
+  .field-row label { margin-top: 0; }
+  .field-row button { margin-top: 0; align-self: flex-end; }
+  .decisions-list { margin-top: 1rem; max-height: 440px; overflow-y: auto; display: flex; flex-direction: column; gap: 0.5rem; }
+  .decision-row { background: #0f0e0c; border: 1px solid #2a2620; border-radius: 8px; padding: 0.6rem 0.75rem; font-size: 0.8rem; }
+  .decision-head { display: flex; align-items: center; gap: 0.5rem; margin-bottom: 0.3rem; }
+  .decision-badge { font-size: 0.68rem; font-weight: 600; padding: 0.1rem 0.45rem; border-radius: 999px; letter-spacing: 0.02em; }
+  .decision-badge.intentiq { background: #2a2410; color: #d2a24c; }
+  .decision-badge.reasoniq { background: #10241f; color: #7fbf8f; }
+  .decision-time { color: #6b6459; font-size: 0.72rem; }
+  .decision-summary { color: #ece7dc; }
+  .decision-input { color: #9b9484; margin-top: 0.25rem; font-style: italic; overflow-wrap: anywhere; }
+  .decisions-empty { color: #6b6459; font-size: 0.82rem; }
 </style>
 </head>
 <body>
@@ -82,6 +96,28 @@
     <button id="saveVisionModelBtn" disabled>Save selection</button>
     <button id="clearVisionModelBtn" class="secondary">Reuse ReasonIQ's model</button>
     <div class="status" id="visionModelStatus"></div>
+  </section>
+
+  <section>
+    <h2>Logos — decision log</h2>
+    <p class="hint" style="margin-top:0;">Durable copy of IntentIQ/ReasonIQ decisions (decisionStore.js) — for debugging classification and reasoning after the fact, not a live conversation view.</p>
+    <div class="field-row">
+      <div>
+        <label for="decisionsKind">Kind</label>
+        <select id="decisionsKind">
+          <option value="">All</option>
+          <option value="intentiq.decision">IntentIQ</option>
+          <option value="reasoniq.result">ReasonIQ</option>
+        </select>
+      </div>
+      <div style="flex: 0 0 90px; min-width: 90px;">
+        <label for="decisionsLimit">Limit</label>
+        <input id="decisionsLimit" type="number" value="50" min="1" max="500">
+      </div>
+      <button id="refreshDecisionsBtn" class="secondary">Refresh</button>
+    </div>
+    <div class="status" id="decisionsStatus"></div>
+    <div class="decisions-list" id="decisionsList"></div>
   </section>
 </main>
 
@@ -242,8 +278,88 @@
     saveVisionModelBtn.click();
   });
 
-  if (tokenEl.value) loadConfig();
-  tokenEl.addEventListener('change', loadConfig);
+  // --- Logos decision log ---------------------------------------------
+  const decisionsKindEl = $('decisionsKind'), decisionsLimitEl = $('decisionsLimit');
+  const refreshDecisionsBtn = $('refreshDecisionsBtn'), decisionsStatusEl = $('decisionsStatus'), decisionsListEl = $('decisionsList');
+
+  function escapeHtml(s) {
+    return String(s == null ? '' : s).replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
+  }
+
+  function formatTime(iso) {
+    try { return new Date(iso).toLocaleString(); } catch (_) { return iso || ''; }
+  }
+
+  function summarizeDecision(d) {
+    if (d.kind === 'intentiq.decision') {
+      const parts = [
+        'intent: ' + (d.intent || '—'),
+        'status: ' + (d.status || '—'),
+        typeof d.confidence === 'number' ? 'confidence: ' + d.confidence.toFixed(2) : null,
+        d.needsClarification ? 'needs clarification' : null,
+      ].filter(Boolean);
+      return parts.join(' · ');
+    }
+    if (d.kind === 'reasoniq.result') {
+      const parts = [
+        'depth: ' + (d.reasoningDepth || '—'),
+        typeof d.confidence === 'number' ? 'confidence: ' + d.confidence.toFixed(2) : null,
+        'hypotheses: ' + (d.hypothesisCount ?? '—'),
+        'contradictions: ' + (d.contradictionCount ?? '—'),
+        d.sufficientForConclusion ? 'sufficient' : null,
+        d.fallbackReason ? 'fallback: ' + d.fallbackReason : null,
+      ].filter(Boolean);
+      return parts.join(' · ');
+    }
+    return JSON.stringify(d);
+  }
+
+  function renderDecisions(decisions) {
+    if (!decisions.length) {
+      decisionsListEl.innerHTML = '<div class="decisions-empty">No decisions logged yet.</div>';
+      return;
+    }
+    decisionsListEl.innerHTML = decisions.map((d) => {
+      const badgeClass = d.kind === 'intentiq.decision' ? 'intentiq' : d.kind === 'reasoniq.result' ? 'reasoniq' : '';
+      const badgeLabel = d.kind === 'intentiq.decision' ? 'IntentIQ' : d.kind === 'reasoniq.result' ? 'ReasonIQ' : (d.kind || '?');
+      return (
+        '<div class="decision-row">' +
+          '<div class="decision-head">' +
+            '<span class="decision-badge ' + badgeClass + '">' + escapeHtml(badgeLabel) + '</span>' +
+            '<span class="decision-time">' + escapeHtml(formatTime(d.timestamp)) + (d.contextId ? ' · ' + escapeHtml(d.contextId) : '') + '</span>' +
+          '</div>' +
+          '<div class="decision-summary">' + escapeHtml(summarizeDecision(d)) + '</div>' +
+          (d.input ? '<div class="decision-input">"' + escapeHtml(d.input) + '"</div>' : '') +
+        '</div>'
+      );
+    }).join('');
+  }
+
+  async function loadDecisions() {
+    refreshDecisionsBtn.disabled = true;
+    setStatus(decisionsStatusEl, 'Loading…', true);
+    try {
+      const params = new URLSearchParams();
+      if (decisionsKindEl.value) params.set('kind', decisionsKindEl.value);
+      const limit = parseInt(decisionsLimitEl.value, 10);
+      if (limit > 0) params.set('limit', String(limit));
+      const res = await fetch('/admin/api/logos/decisions?' + params.toString(), { headers: authHeaders() });
+      if (!res.ok) throw new Error('request failed (' + res.status + ')');
+      const body = await res.json();
+      renderDecisions(body.decisions || []);
+      setStatus(decisionsStatusEl, (body.decisions || []).length + ' shown.', true);
+    } catch (err) {
+      setStatus(decisionsStatusEl, 'Could not load decisions: ' + err.message, false);
+    } finally {
+      refreshDecisionsBtn.disabled = false;
+    }
+  }
+
+  refreshDecisionsBtn.addEventListener('click', loadDecisions);
+  decisionsKindEl.addEventListener('change', loadDecisions);
+
+  if (tokenEl.value) { loadConfig(); loadDecisions(); }
+  tokenEl.addEventListener('change', () => { loadConfig(); loadDecisions(); });
 })();
 </script>
 </body>

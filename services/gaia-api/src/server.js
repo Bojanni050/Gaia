@@ -8,7 +8,7 @@
  *   GET  /soul               → { version: string }   (identity version only)
  *   POST /conversation/turn  → { reply: string }     (auth required, Desktop's exact contract; optional { attachmentIds: [...] } inlines library files as context)
  *   POST /conversation/turn  → SSE stream            (auth required; { ..., stream: true } — Phase B, docs/web-migration-plan.md)
- *   /admin/*                 → operator-only ReasonIQ model configuration (adminRoutes.js) — never part of any client's contract
+ *   /admin/*                 → operator-only ReasonIQ config + IntentIQ/ReasonIQ decision log (adminRoutes.js) — never part of any client's contract
  *   /library/*               → file library: upload/list/download/delete (libraryRoutes.js), auth required
  *   /conversations/*         → chat history: list/read/delete (historyRoutes.js), auth required — written as a
  *                              fire-and-forget side effect of a successful /conversation/turn, never by direct upload
@@ -30,6 +30,7 @@ const { createLibraryStore, resolveAttachmentsForPrompt } = require('./library')
 const { createLibraryRouter } = require('./libraryRoutes');
 const { createConversationStore } = require('./conversationStore');
 const { createHistoryRouter } = require('./historyRoutes');
+const { createDecisionStore } = require('./logos/decisionStore');
 
 const PORT = Number(process.env.PORT || 8891);
 
@@ -72,7 +73,10 @@ function createApp(env = process.env) {
   const reasoningModelStore = createReasoningModelStore(
     env.REASONIQ_CONFIG_PATH !== undefined ? { storePath: env.REASONIQ_CONFIG_PATH } : {}
   );
-  app.use('/admin', createAdminRouter({ store: reasoningModelStore, auth }));
+  const decisionStore = createDecisionStore(
+    env.LOGOS_DECISIONS_PATH !== undefined ? { decisionsDir: env.LOGOS_DECISIONS_PATH } : {}
+  );
+  app.use('/admin', createAdminRouter({ store: reasoningModelStore, decisionStore, auth }));
 
   const libraryStore = createLibraryStore(env.LIBRARY_PATH !== undefined ? { libraryDir: env.LIBRARY_PATH } : {});
   const libraryMaxFileSizeMb = Number(env.LIBRARY_MAX_FILE_SIZE_MB) || undefined;
@@ -101,6 +105,7 @@ function createApp(env = process.env) {
         res,
         conversationId,
         historyStore,
+        decisionStore,
       });
       return;
     }

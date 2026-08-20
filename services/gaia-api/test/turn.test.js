@@ -477,3 +477,71 @@ test('performStreamingTurn completes normally even if historyStore.saveConversat
 
   assert.equal(res.written.at(-1), 'data: [DONE]\n\n');
 });
+
+// --- decisionStore (durable IntentIQ/ReasonIQ log) --------------------
+
+test('performStreamingTurn persists both the IntentIQ decision and the ReasonIQ result when a decisionStore is given', async () => {
+  const appended = [];
+  const decisionStore = { append: (record) => { appended.push(record); return true; } };
+  const hermes = { stream: async (messages, { onDelta }) => { onDelta('ok', false); return 'A reply.'; } };
+
+  await performStreamingTurn({
+    messages: [{ role: 'user', content: 'Why is my website crashing?' }],
+    documents: DOCUMENTS,
+    hermes,
+    hindsight: SILENT_HINDSIGHT,
+    res: fakeRes(),
+    intentIQ: (messages, options) => {
+      options.logger(JSON.stringify({ kind: 'intentiq.decision', intent: 'inform.explain' }));
+      return { schemaVersion: 'intentiq.v1', intent: 'inform.explain', status: 'accepted' };
+    },
+    reasonIQ: async (input, options) => {
+      options.logger(JSON.stringify({ kind: 'reasoniq.result', reasoningDepth: 'shallow' }));
+      return {};
+    },
+    decisionStore,
+  });
+  await flush();
+
+  assert.equal(appended.length, 2);
+  assert.equal(appended[0].kind, 'intentiq.decision');
+  assert.equal(appended[1].kind, 'reasoniq.result');
+});
+
+test('performStreamingTurn never calls decisionStore.append when no decisionStore is given (backward compatible)', async () => {
+  let called = false;
+  const hermes = { stream: async (messages, { onDelta }) => { onDelta('ok', false); return 'A reply.'; } };
+
+  await performStreamingTurn({
+    messages: [{ role: 'user', content: 'hello there friend' }],
+    documents: DOCUMENTS,
+    hermes,
+    hindsight: SILENT_HINDSIGHT,
+    res: fakeRes(),
+    intentIQ: (messages, options) => {
+      called = called || options.logger !== undefined;
+      return { schemaVersion: 'intentiq.v1', intent: null, status: 'unknown' };
+    },
+    // decisionStore omitted entirely
+  });
+
+  assert.equal(called, false); // logger stayed undefined -> intentIQ/reasonIQ fall back to their own console.log default
+});
+
+test('performStreamingTurn completes normally even if decisionStore.append throws', async () => {
+  const res = fakeRes();
+  const decisionStore = { append: () => { throw new Error('disk full'); } };
+  const hermes = { stream: async (messages, { onDelta }) => { onDelta('ok', false); return 'A reply.'; } };
+
+  await performStreamingTurn({
+    messages: [{ role: 'user', content: 'hello there friend' }],
+    documents: DOCUMENTS,
+    hermes,
+    hindsight: SILENT_HINDSIGHT,
+    res,
+    decisionStore,
+  });
+  await flush();
+
+  assert.equal(res.written.at(-1), 'data: [DONE]\n\n');
+});

@@ -170,9 +170,10 @@ function writeSseDelta(res, delta) {
  *   intentIQ?: (messages: Array, options: object) => object,
  *   reasonIQ?: (input: object, options: object) => Promise<object>,
  *   historyStore?: { saveConversation: (id: string, messages: Array) => void },
+ *   decisionStore?: { append: (record: object) => boolean },
  * }} input
  */
-async function performStreamingTurn({ messages, documents, hermes, hindsight, res, conversationId, intentIQ = classifyIntent, reasonIQ = evaluateReasoning, historyStore }) {
+async function performStreamingTurn({ messages, documents, hermes, hindsight, res, conversationId, intentIQ = classifyIntent, reasonIQ = evaluateReasoning, historyStore, decisionStore }) {
   const problem = validateMessages(messages);
   if (problem) {
     res.status(400).json({ error: problem });
@@ -180,6 +181,25 @@ async function performStreamingTurn({ messages, documents, hermes, hindsight, re
   }
 
   const userText = latestUserText(messages);
+
+  // Both console.log (unchanged, for live `docker logs` tailing) and, when
+  // a decisionStore is given, a durable JSONL line (decisionStore.js) —
+  // console output alone doesn't survive past Docker's own log retention,
+  // and "why did Gaia classify this the way it did" is exactly the kind of
+  // question that gets asked well after the fact. Store-write failures are
+  // swallowed the same way logIntentDecision/logReasoningResult already
+  // swallow nothing being wrong with logging itself — append() never
+  // throws, but wrapped anyway since this must never affect the turn.
+  const decisionLogger = decisionStore
+    ? (line) => {
+        console.log(line);
+        try {
+          decisionStore.append(JSON.parse(line));
+        } catch (_) {
+          // Never let observability persistence affect a real turn.
+        }
+      }
+    : undefined;
 
   // Logos: IntentIQ observes the turn and produces an IntentDecision.
   // Dev-logged for inspection only (see logos/intentLog.js) — it does not
@@ -189,7 +209,7 @@ async function performStreamingTurn({ messages, documents, hermes, hindsight, re
   // Milestone 7b). Never allowed to throw into the turn path.
   let intentDecision = null;
   try {
-    intentDecision = intentIQ(messages, { contextId: conversationId });
+    intentDecision = intentIQ(messages, { contextId: conversationId, logger: decisionLogger });
   } catch (_) {
     // Observability must never take down a real conversational turn.
   }
@@ -206,7 +226,7 @@ async function performStreamingTurn({ messages, documents, hermes, hindsight, re
   // evidence yet, so today's calls mostly resolve shallow or degrade
   // instantly when no reasoning model is configured.
   Promise.resolve()
-    .then(() => reasonIQ({ text: userText, intentDecision, conversationContext: messages, evidence: [], contextId: conversationId }, {}))
+    .then(() => reasonIQ({ text: userText, intentDecision, conversationContext: messages, evidence: [], contextId: conversationId }, { logger: decisionLogger }))
     .catch(() => {});
 
   const systemPrompt = buildSystemPrompt(documents, messages);
