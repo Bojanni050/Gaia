@@ -160,3 +160,30 @@ test('deleteConversation throws InvalidConversationIdError for a malformed id', 
   const store = tempStore();
   assert.throws(() => store.deleteConversation('../escape'), InvalidConversationIdError);
 });
+
+// --- events (push notifications for historyRoutes.js's SSE endpoint) -----
+
+test('saveConversation emits "changed" on the store\'s events emitter', () => {
+  const store = tempStore();
+  let fired = 0;
+  store.events.on('changed', () => { fired += 1; });
+  store.saveConversation('conv-1', [{ role: 'user', content: 'hi' }]);
+  assert.equal(fired, 1);
+});
+
+test('saveConversation with an empty message array does not emit "changed" (it is a no-op)', () => {
+  const store = tempStore();
+  let fired = 0;
+  store.events.on('changed', () => { fired += 1; });
+  store.saveConversation('conv-1', []);
+  assert.equal(fired, 0);
+});
+
+test('deleteConversation emits "changed" on the store\'s events emitter', () => {
+  const store = tempStore();
+  store.saveConversation('conv-1', [{ role: 'user', content: 'hi' }]);
+  let fired = 0;
+  store.events.on('changed', () => { fired += 1; });
+  store.deleteConversation('conv-1');
+  assert.equal(fired, 1);
+});

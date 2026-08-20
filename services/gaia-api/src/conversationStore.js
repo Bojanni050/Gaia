@@ -23,6 +23,7 @@
 
 const fs = require('fs');
 const path = require('path');
+const { EventEmitter } = require('events');
 
 function resolveHistoryDir(env = process.env) {
   if (env.HISTORY_PATH) return env.HISTORY_PATH;
@@ -68,6 +69,11 @@ function deriveTitle(messages) {
  */
 function createConversationStore(options = {}) {
   const historyDir = options.historyDir || resolveHistoryDir();
+  // Lets historyRoutes.js's SSE endpoint push a fresh list to connected
+  // clients whenever a save/delete changes it, instead of them polling.
+  // No payload on the event — listeners just re-read via listConversations()
+  // — so this stays correct even if two writes race.
+  const events = new EventEmitter();
 
   function convDir(id) {
     return path.join(historyDir, id);
@@ -106,6 +112,7 @@ function createConversationStore(options = {}) {
     const plain = messages.map(({ role, content }) => ({ role, content }));
     fs.writeFileSync(messagesPath(id), JSON.stringify(plain, null, 2), 'utf-8');
     fs.writeFileSync(metaPath(id), JSON.stringify(meta, null, 2), 'utf-8');
+    events.emit('changed');
   }
 
   /** @returns {Array<{id, title, createdAt, updatedAt, messageCount}>} newest first */
@@ -143,9 +150,10 @@ function createConversationStore(options = {}) {
     if (!isValidId(id)) throw new InvalidConversationIdError(id);
     if (!fs.existsSync(convDir(id))) throw new ConversationNotFoundError(id);
     fs.rmSync(convDir(id), { recursive: true, force: true });
+    events.emit('changed');
   }
 
-  return { saveConversation, listConversations, getConversation, deleteConversation, historyDir };
+  return { saveConversation, listConversations, getConversation, deleteConversation, historyDir, events };
 }
 
 module.exports = {

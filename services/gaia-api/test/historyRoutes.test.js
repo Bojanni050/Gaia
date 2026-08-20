@@ -139,3 +139,81 @@ test('DELETE /conversations/:id requires auth and returns 404 for an unknown id'
     await ctx.close();
   }
 });
+
+// --- GET /conversations/events (SSE push, so the sidebar can stay in sync
+// with another client without polling) -------------------------------------
+
+test('GET /conversations/events requires auth', async () => {
+  const ctx = startTestServer();
+  try {
+    const res = await fetch(`${ctx.baseUrl}/conversations/events`);
+    assert.equal(res.status, 401);
+  } finally {
+    await ctx.close();
+  }
+});
+
+test('GET /conversations/events pushes "changed" when a conversation is saved', async () => {
+  const ctx = startTestServer();
+  try {
+    const res = await fetch(`${ctx.baseUrl}/conversations/events`, { headers: authHeaders() });
+    assert.equal(res.status, 200);
+    assert.match(res.headers.get('content-type') || '', /text\/event-stream/);
+
+    const reader = res.body.getReader();
+    const decoder = new TextDecoder();
+    let buffer = '';
+    async function readUntil(match) {
+      while (!buffer.includes(match)) {
+        const { value, done } = await reader.read();
+        if (done) throw new Error('stream ended before seeing ' + JSON.stringify(match));
+        buffer += decoder.decode(value, { stream: true });
+      }
+    }
+
+    await readUntil('\n\n'); // the initial ":ok" comment frame
+    buffer = '';
+
+    ctx.store.saveConversation('conv-1', [{ role: 'user', content: 'hi' }]);
+    await readUntil('event: changed');
+    assert.match(buffer, /event: changed\ndata: \{\}\n\n/);
+
+    await reader.cancel();
+  } finally {
+    await ctx.close();
+  }
+});
+
+test('GET /conversations/events does not push for a no-op save (empty messages)', async () => {
+  const ctx = startTestServer();
+  try {
+    const res = await fetch(`${ctx.baseUrl}/conversations/events`, { headers: authHeaders() });
+    const reader = res.body.getReader();
+    const decoder = new TextDecoder();
+    let buffer = '';
+    async function readSome() {
+      const { value, done } = await reader.read();
+      if (!done) buffer += decoder.decode(value, { stream: true });
+    }
+    await readSome(); // the initial ":ok" comment frame
+    buffer = '';
+
+    ctx.store.saveConversation('conv-1', []); // no-op, per conversationStore.js
+    ctx.store.saveConversation('conv-2', [{ role: 'user', content: 'this one counts' }]);
+    await readUntilChanged(reader, decoder, () => buffer, (v) => { buffer = v; });
+
+    // Only one "changed" frame should ever arrive, from conv-2's real save.
+    assert.equal((buffer.match(/event: changed/g) || []).length, 1);
+    await reader.cancel();
+  } finally {
+    await ctx.close();
+  }
+});
+
+async function readUntilChanged(reader, decoder, getBuffer, setBuffer) {
+  while (!getBuffer().includes('event: changed')) {
+    const { value, done } = await reader.read();
+    if (done) throw new Error('stream ended before seeing event: changed');
+    setBuffer(getBuffer() + decoder.decode(value, { stream: true }));
+  }
+}
